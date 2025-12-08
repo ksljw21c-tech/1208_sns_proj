@@ -11,27 +11,38 @@
  * - Sidebar: Desktop/Tablet에서 표시
  * - Header: Mobile에서만 표시
  * - BottomNav: Mobile에서만 표시
+ * - CreatePostModal: 게시물 작성 모달
  */
 
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import BottomNav from "@/components/layout/bottom-nav";
+import CreatePostModal from "@/components/post/create-post-modal";
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+  const router = useRouter();
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
-  const handleCreatePost = () => {
+  const handleCreatePost = useCallback(() => {
     setIsCreatePostOpen(true);
-    // TODO: CreatePostModal 연결 (5. 게시물 작성에서 구현)
-    console.log("게시물 작성 모달 열기");
-  };
+  }, []);
+
+  const handleCloseCreatePost = useCallback(() => {
+    setIsCreatePostOpen(false);
+  }, []);
+
+  const handlePostSuccess = useCallback(() => {
+    // 피드 새로고침
+    router.refresh();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-instagram">
@@ -59,6 +70,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav onCreatePost={handleCreatePost} />
+
+      {/* 게시물 작성 모달 */}
+      <CreatePostModal
+        open={isCreatePostOpen}
+        onClose={handleCloseCreatePost}
+        onSuccess={handlePostSuccess}
+      />
     </div>
   );
 }
