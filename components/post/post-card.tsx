@@ -9,6 +9,7 @@
  * - 좋아요 수 Bold
  * - 캡션: 사용자명 Bold + 내용, 2줄 초과 시 "... 더 보기"
  * - 댓글 미리보기: 최신 2개
+ * - 댓글 작성 폼
  */
 
 "use client";
@@ -19,6 +20,8 @@ import Link from "next/link";
 import { MoreHorizontal, MessageCircle, Send, Bookmark, Heart } from "lucide-react";
 import { cn, formatRelativeTime, formatNumber } from "@/lib/utils";
 import LikeButton from "./like-button";
+import CommentList from "@/components/comment/comment-list";
+import CommentForm from "@/components/comment/comment-form";
 import type { PostWithUser, CommentWithUser } from "@/lib/types";
 
 interface PostCardProps {
@@ -27,11 +30,15 @@ interface PostCardProps {
   onCommentClick?: () => void;
 }
 
-export default function PostCard({ post, comments = [], onCommentClick }: PostCardProps) {
+export default function PostCard({ post, comments: initialComments = [], onCommentClick }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likeCount, setLikeCount] = useState(post.likes_count);
   const [showFullCaption, setShowFullCaption] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const [comments, setComments] = useState<CommentWithUser[]>(initialComments);
+  const [commentCount, setCommentCount] = useState(post.comments_count);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const lastTapRef = useRef<number>(0);
 
   // 더블탭 감지 및 좋아요 처리
@@ -73,6 +80,74 @@ export default function PostCard({ post, comments = [], onCommentClick }: PostCa
     setIsLiked(liked);
     setLikeCount(count);
   }, []);
+
+  // 댓글 작성 핸들러
+  const handleCommentSubmit = useCallback(
+    async (content: string) => {
+      setIsSubmittingComment(true);
+
+      try {
+        const response = await fetch("/api/comments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ post_id: post.id, content }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "댓글 작성에 실패했습니다.");
+        }
+
+        const { data: newComment } = await response.json();
+
+        // 댓글 목록에 추가 (최신 댓글이 뒤에)
+        setComments((prev) => [...prev, newComment]);
+        setCommentCount((prev) => prev + 1);
+      } catch (error) {
+        console.error("댓글 작성 에러:", error);
+        throw error; // CommentForm에서 에러 처리하도록
+      } finally {
+        setIsSubmittingComment(false);
+      }
+    },
+    [post.id]
+  );
+
+  // 댓글 삭제 핸들러
+  const handleCommentDelete = useCallback(async (commentId: string) => {
+    setDeletingCommentId(commentId);
+
+    // Optimistic UI - 먼저 목록에서 제거
+    const deletedComment = comments.find((c) => c.id === commentId);
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    setCommentCount((prev) => prev - 1);
+
+    try {
+      const response = await fetch("/api/comments", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment_id: commentId }),
+      });
+
+      if (!response.ok) {
+        // 실패 시 롤백
+        if (deletedComment) {
+          setComments((prev) => [...prev, deletedComment]);
+          setCommentCount((prev) => prev + 1);
+        }
+        console.error("댓글 삭제 실패");
+      }
+    } catch (error) {
+      // 에러 시 롤백
+      if (deletedComment) {
+        setComments((prev) => [...prev, deletedComment]);
+        setCommentCount((prev) => prev + 1);
+      }
+      console.error("댓글 삭제 에러:", error);
+    } finally {
+      setDeletingCommentId(null);
+    }
+  }, [comments]);
 
   // 캡션이 긴지 확인 (대략 100자 이상)
   const isLongCaption = post.caption && post.caption.length > 100;
@@ -216,45 +291,34 @@ export default function PostCard({ post, comments = [], onCommentClick }: PostCa
       )}
 
       {/* 댓글 미리보기 */}
-      {post.comments_count > 0 && (
+      {commentCount > 0 && (
         <div className="px-3 pb-2">
           {/* 전체 댓글 보기 링크 */}
-          {post.comments_count > 2 && (
+          {commentCount > 2 && (
             <button
               onClick={onCommentClick}
               className="text-sm text-instagram-secondary mb-1"
             >
-              댓글 {formatNumber(post.comments_count)}개 모두 보기
+              댓글 {formatNumber(commentCount)}개 모두 보기
             </button>
           )}
 
           {/* 최신 댓글 2개 미리보기 */}
-          {comments.slice(0, 2).map((comment) => (
-            <p key={comment.id} className="text-sm">
-              <Link
-                href={`/profile/${comment.user.id}`}
-                className="font-semibold mr-1 hover:underline"
-              >
-                {comment.user.name}
-              </Link>
-              {comment.content.length > 50
-                ? `${comment.content.slice(0, 50)}...`
-                : comment.content}
-            </p>
-          ))}
+          <CommentList
+            comments={comments.slice(-2)} // 최신 2개 (맨 뒤 2개)
+            mode="preview"
+          />
         </div>
       )}
 
-      {/* 댓글 작성 (간단한 입력창) */}
+      {/* 댓글 작성 폼 */}
       <div className="px-3 py-3 border-t border-instagram">
-        <button
-          onClick={onCommentClick}
-          className="text-sm text-instagram-secondary"
-        >
-          댓글 달기...
-        </button>
+        <CommentForm
+          postId={post.id}
+          onSubmit={handleCommentSubmit}
+          isSubmitting={isSubmittingComment}
+        />
       </div>
     </article>
   );
 }
-
