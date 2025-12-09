@@ -17,8 +17,18 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Send, Bookmark, Heart } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Send, Bookmark, Heart, Trash2 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import { cn, formatRelativeTime, formatNumber } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import LikeButton from "./like-button";
 import CommentList from "@/components/comment/comment-list";
 import CommentForm from "@/components/comment/comment-form";
@@ -28,9 +38,11 @@ interface PostCardProps {
   post: PostWithUser;
   comments?: CommentWithUser[];
   onCommentClick?: () => void;
+  onDelete?: (postId: string) => void;
 }
 
-export default function PostCard({ post, comments: initialComments = [], onCommentClick }: PostCardProps) {
+export default function PostCard({ post, comments: initialComments = [], onCommentClick, onDelete }: PostCardProps) {
+  const { user } = useUser();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likeCount, setLikeCount] = useState(post.likes_count);
   const [showFullCaption, setShowFullCaption] = useState(false);
@@ -39,8 +51,13 @@ export default function PostCard({ post, comments: initialComments = [], onComme
   const [commentCount, setCommentCount] = useState(post.comments_count);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const lastTapRef = useRef<number>(0);
   const singleClickTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 본인 게시물인지 확인
+  const isOwner = user?.id === post.user.clerk_id;
 
   // 더블탭 감지 및 좋아요 처리
   const handleImageClick = useCallback(async () => {
@@ -168,6 +185,33 @@ export default function PostCard({ post, comments: initialComments = [], onComme
     }
   }, [comments]);
 
+  // 게시물 삭제 핸들러
+  const handleDeletePost = useCallback(async () => {
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "게시물 삭제에 실패했습니다.");
+      }
+
+      // 성공 시 다이얼로그 닫기 및 부모 컴포넌트에 알림
+      setShowDeleteDialog(false);
+      if (onDelete) {
+        onDelete(post.id);
+      }
+    } catch (error) {
+      console.error("게시물 삭제 에러:", error);
+      alert(error instanceof Error ? error.message : "게시물 삭제에 실패했습니다.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [post.id, onDelete]);
+
   // 캡션이 긴지 확인 (대략 100자 이상)
   const isLongCaption = post.caption && post.caption.length > 100;
 
@@ -203,12 +247,15 @@ export default function PostCard({ post, comments: initialComments = [], onComme
           <span className="text-xs text-instagram-secondary">
             {formatRelativeTime(post.created_at)}
           </span>
-          <button
-            className="p-1 hover:opacity-70 transition-opacity"
-            aria-label="더보기"
-          >
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
+          {isOwner && (
+            <button
+              onClick={() => setShowDeleteDialog(true)}
+              className="p-1 hover:opacity-70 transition-opacity"
+              aria-label="더보기"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -338,6 +385,34 @@ export default function PostCard({ post, comments: initialComments = [], onComme
           isSubmitting={isSubmittingComment}
         />
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>게시물 삭제</DialogTitle>
+            <DialogDescription>
+              정말 이 게시물을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeletePost}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }

@@ -148,6 +148,21 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
     setSelectedPostId(postId);
   }, []);
 
+  // 게시물 삭제 핸들러
+  const handleDeletePost = useCallback((postId: string) => {
+    // Optimistic UI: 즉시 목록에서 제거
+    const deletedPost = posts.find((p) => p.id === postId);
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+
+    // 모달이 열려있고 삭제된 게시물이면 모달 닫기
+    if (selectedPostId === postId) {
+      setSelectedPostId(null);
+    }
+
+    // 실패 시 롤백은 PostCard/PostModal에서 처리
+    // (API 호출이 실패하면 에러 메시지 표시 후 롤백)
+  }, [posts, selectedPostId]);
+
   return (
     <>
       <div className="space-y-4">
@@ -157,6 +172,7 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
             key={post.id}
             post={post}
             onCommentClick={() => handleOpenModal(post.id)}
+            onDelete={handleDeletePost}
           />
         ))}
 
@@ -188,6 +204,7 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
         post={selectedPost}
         posts={posts}
         onNavigate={handleNavigate}
+        onDelete={handleDeletePost}
       />
     </>
   );

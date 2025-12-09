@@ -14,11 +14,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, ChevronLeft, ChevronRight, MoreHorizontal, MessageCircle, Send, Bookmark, Heart } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, MoreHorizontal, MessageCircle, Send, Bookmark, Heart, Trash2 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import LikeButton from "./like-button";
 import CommentList from "@/components/comment/comment-list";
 import CommentForm from "@/components/comment/comment-form";
@@ -31,6 +37,7 @@ interface PostModalProps {
   post: PostWithUser | null;
   posts?: PostWithUser[]; // 이전/다음 네비게이션용
   onNavigate?: (postId: string) => void; // 이전/다음 게시물로 이동
+  onDelete?: (postId: string) => void; // 게시물 삭제 콜백
 }
 
 export default function PostModal({
@@ -39,7 +46,9 @@ export default function PostModal({
   post,
   posts = [],
   onNavigate,
+  onDelete,
 }: PostModalProps) {
+  const { user } = useUser();
   const [comments, setComments] = useState<CommentWithUser[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
@@ -48,8 +57,13 @@ export default function PostModal({
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const lastTapRef = useRef<number>(0);
   const commentScrollRef = useRef<HTMLDivElement>(null);
+
+  // 본인 게시물인지 확인
+  const isOwner = post ? user?.id === post.user.clerk_id : false;
 
   // 게시물이 변경될 때 상태 초기화
   useEffect(() => {
@@ -226,6 +240,36 @@ export default function PostModal({
     }
   }, [hasNext, onNavigate, posts, currentIndex]);
 
+  // 게시물 삭제 핸들러
+  const handleDeletePost = useCallback(async () => {
+    if (!post) return;
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "게시물 삭제에 실패했습니다.");
+      }
+
+      // 성공 시 다이얼로그 닫기, 모달 닫기 및 부모 컴포넌트에 알림
+      setShowDeleteDialog(false);
+      onClose();
+      if (onDelete) {
+        onDelete(post.id);
+      }
+    } catch (error) {
+      console.error("게시물 삭제 에러:", error);
+      alert(error instanceof Error ? error.message : "게시물 삭제에 실패했습니다.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [post, onClose, onDelete]);
+
   if (!post) return null;
 
   return (
@@ -323,12 +367,15 @@ export default function PostModal({
             </div>
 
             {/* 더보기 메뉴 */}
-            <button
-              className="p-1 hover:opacity-70 transition-opacity"
-              aria-label="더보기"
-            >
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+            {isOwner && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="p-1 hover:opacity-70 transition-opacity"
+                aria-label="더보기"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+            )}
           </header>
 
           {/* 댓글 목록 (스크롤 가능) */}
@@ -426,6 +473,34 @@ export default function PostModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>게시물 삭제</DialogTitle>
+            <DialogDescription>
+              정말 이 게시물을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeletePost}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

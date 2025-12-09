@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { Heart, MessageCircle } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
@@ -23,8 +23,14 @@ interface PostGridProps {
   userId?: string; // 특정 사용자의 게시물만 (프로필 페이지용)
 }
 
-export default function PostGrid({ posts, userId }: PostGridProps) {
+export default function PostGrid({ posts: initialPosts, userId }: PostGridProps) {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [posts, setPosts] = useState<PostWithUser[]>(initialPosts);
+
+  // initialPosts가 변경되면 상태 업데이트
+  useEffect(() => {
+    setPosts(initialPosts);
+  }, [initialPosts]);
 
   // 선택된 게시물 찾기
   const selectedPost = selectedPostId
@@ -45,6 +51,21 @@ export default function PostGrid({ posts, userId }: PostGridProps) {
   const handleNavigate = useCallback((postId: string) => {
     setSelectedPostId(postId);
   }, []);
+
+  // 게시물 삭제 핸들러
+  const handleDeletePost = useCallback((postId: string) => {
+    // Optimistic UI: 즉시 목록에서 제거
+    const deletedPost = posts.find((p) => p.id === postId);
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+
+    // 모달이 열려있고 삭제된 게시물이면 모달 닫기
+    if (selectedPostId === postId) {
+      setSelectedPostId(null);
+    }
+
+    // 실패 시 롤백은 PostModal에서 처리
+    // (API 호출이 실패하면 에러 메시지 표시 후 롤백)
+  }, [posts, selectedPostId]);
 
   // 빈 상태
   if (posts.length === 0) {
@@ -103,6 +124,7 @@ export default function PostGrid({ posts, userId }: PostGridProps) {
         post={selectedPost}
         posts={posts}
         onNavigate={handleNavigate}
+        onDelete={handleDeletePost}
       />
     </>
   );
