@@ -43,8 +43,8 @@ export default function LikeButton({
     setLikeCount(newCount);
     setIsAnimating(true);
 
-    // 애니메이션 후 리셋
-    setTimeout(() => setIsAnimating(false), 300);
+    // 애니메이션 후 리셋 (0.15초)
+    setTimeout(() => setIsAnimating(false), 150);
 
     setIsLoading(true);
 

@@ -208,7 +208,7 @@
   
   /* 좋아요 애니메이션 */
   .like-animation {
-    animation: like-bounce 0.3s ease-in-out;
+    animation: like-bounce 0.15s ease-in-out;
   }
   
   @keyframes like-bounce {
