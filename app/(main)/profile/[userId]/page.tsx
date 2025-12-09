@@ -154,6 +154,28 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         isFollowing={isFollowing}
         isOwnProfile={isOwnProfile}
         profileImageUrl={profileImageUrl}
+        onFollowChange={(isFollowing, newFollowersCount) => {
+          // 팔로우 상태 변경 및 통계 실시간 업데이트 확인
+          console.group("통계 실시간 업데이트 확인");
+          console.log("✅ 팔로우 상태 변경:", {
+            이전상태: isFollowing ? false : true,
+            현재상태: isFollowing,
+            액션: isFollowing ? "팔로우 추가" : "언팔로우",
+          });
+          console.log("✅ 팔로워 수 업데이트:", {
+            이전팔로워수: followersCount,
+            현재팔로워수: newFollowersCount,
+            변경량: newFollowersCount - followersCount,
+            예상변경: isFollowing ? 1 : -1,
+            일치여부: newFollowersCount - followersCount === (isFollowing ? 1 : -1) ? "✅ 일치" : "❌ 불일치",
+          });
+          console.log("통계 실시간 업데이트:", {
+            게시물수: postsCount,
+            팔로워수: newFollowersCount,
+            팔로잉수: followingCount,
+          });
+          console.groupEnd();
+        }}
       />
 
       {/* 게시물 그리드 */}

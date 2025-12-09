@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -43,6 +43,12 @@ export default function ProfileHeader({
   const [followersCountState, setFollowersCountState] = useState(followersCount);
   const [isLoading, setIsLoading] = useState(false);
 
+  // prop 변경 시 상태 동기화 (다른 페이지에서 팔로우 변경 후 돌아왔을 때)
+  useEffect(() => {
+    setIsFollowingState(isFollowing);
+    setFollowersCountState(followersCount);
+  }, [isFollowing, followersCount]);
+
   // 팔로우/언팔로우 핸들러
   const handleFollow = useCallback(async () => {
     if (isLoading || isOwnProfile) return;
@@ -59,24 +65,44 @@ export default function ProfileHeader({
     setFollowersCountState(newFollowersCount);
 
     try {
-      // TODO: 팔로우 API 호출 (TODO.md ##9에서 구현 예정)
-      // const response = await fetch("/api/follows", {
-      //   method: newFollowing ? "POST" : "DELETE",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ user_id: userId }),
-      // });
+      const response = await fetch("/api/follows", {
+        method: newFollowing ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
 
-      // if (!response.ok) {
-      //   // 실패 시 롤백
-      //   setIsFollowingState(!newFollowing);
-      //   setFollowersCountState(
-      //     newFollowing ? newFollowersCount - 1 : newFollowersCount + 1
-      //   );
-      //   return;
-      // }
+      if (!response.ok) {
+        // 실패 시 롤백
+        setIsFollowingState(!newFollowing);
+        setFollowersCountState(
+          newFollowing ? newFollowersCount - 1 : newFollowersCount + 1
+        );
+        
+        // 에러 메시지 로깅
+        const errorData = await response.json().catch(() => ({}));
+        console.error("팔로우 API 에러:", errorData.error || "알 수 없는 에러");
+        return;
+      }
 
       // 성공 시 콜백 호출
       onFollowChange?.(newFollowing, newFollowersCount);
+
+      // 성공 로깅 (개발 환경에서 동작 확인용)
+      console.group("팔로우 기능 동작 확인");
+      console.log("✅ 팔로우 상태 변경 성공");
+      console.log("변경 전 상태:", {
+        isFollowing: isFollowingState,
+        followersCount: followersCountState,
+      });
+      console.log("변경 후 상태:", {
+        isFollowing: newFollowing,
+        followersCount: newFollowersCount,
+      });
+      console.log("통계 업데이트:", {
+        팔로워수변경: newFollowing ? "+1" : "-1",
+        현재팔로워수: newFollowersCount,
+      });
+      console.groupEnd();
     } catch (error) {
       // 에러 시 롤백
       setIsFollowingState(!newFollowing);

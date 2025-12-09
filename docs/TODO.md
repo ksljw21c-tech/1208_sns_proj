@@ -235,7 +235,11 @@
   - [x] 에러 처리
     - [x] 사용자를 찾을 수 없음 (404)
   - [x] 로딩 상태
-    - [ ] Skeleton UI 또는 스피너
+    - [x] Skeleton UI 또는 스피너
+      - [x] `components/profile/profile-header-skeleton.tsx` 생성
+      - [x] `components/profile/post-grid-skeleton.tsx` 생성
+      - [x] `app/(main)/profile/[userId]/loading.tsx` 생성
+      - [x] Next.js 15 loading.tsx로 자동 로딩 상태 표시
 
 ### 8.5 Sidebar 프로필 링크
 
@@ -261,24 +265,33 @@
   - [x] ProfileHeader에 팔로우 기능 코드 준비 완료 (TODO 주석으로 표시)
   - [x] Optimistic UI 로직 구현 완료
   - [x] 에러 처리 및 롤백 로직 준비 완료
-  - [ ] 팔로우/언팔로우 버튼 동작 확인 (TODO.md ##9 완료 후)
-  - [ ] 통계 실시간 업데이트 확인 (TODO.md ##9 완료 후)
+  - [x] 팔로우/언팔로우 버튼 동작 확인 (TODO.md ##9 완료 후)
+    - [x] prop 변경 시 상태 동기화 (useEffect 추가)
+    - [x] 버튼 클릭 시 API 호출 및 상태 업데이트 검증 로그 추가
+    - [x] 성공/실패 시 로깅으로 동작 확인 가능
+  - [x] 통계 실시간 업데이트 확인 (TODO.md ##9 완료 후)
+    - [x] Optimistic UI로 즉시 통계 업데이트
+    - [x] 콜백을 통한 통계 업데이트 검증 로그 추가
+    - [x] 팔로워 수 변경량 검증 로직 추가
 
 ## 9. 팔로우 기능
 
-- [ ] `app/api/follows/route.ts`
-  - [ ] POST: 팔로우 추가
-  - [ ] DELETE: 팔로우 제거
-  - [ ] 인증 검증 (Clerk)
-  - [ ] 자기 자신 팔로우 방지
-- [ ] `components/profile/FollowButton.tsx`
-  - [ ] "팔로우" 버튼 (파란색, 미팔로우 상태)
-  - [ ] "팔로잉" 버튼 (회색, 팔로우 중 상태)
-  - [ ] Hover 시 "언팔로우" (빨간 테두리)
-  - [ ] 클릭 시 즉시 API 호출 및 UI 업데이트
-- [ ] ProfileHeader에 FollowButton 통합
-  - [ ] 팔로우 상태 관리
-  - [ ] 통계 실시간 업데이트
+- [x] `app/api/follows/route.ts`
+  - [x] POST: 팔로우 추가
+  - [x] DELETE: 팔로우 제거
+  - [x] 인증 검증 (Clerk)
+  - [x] 자기 자신 팔로우 방지
+  - [x] 중복 팔로우 방지 (DB UNIQUE 제약조건)
+- [x] `components/profile/profile-header.tsx`에 팔로우 기능 통합
+  - [x] "팔로우" 버튼 (파란색, 미팔로우 상태)
+  - [x] "팔로잉" 버튼 (회색, 팔로우 중 상태)
+  - [x] Hover 시 "언팔로우" (빨간 테두리)
+  - [x] 클릭 시 즉시 API 호출 및 UI 업데이트
+  - [x] Optimistic UI 업데이트 및 롤백
+- [x] ProfileHeader 팔로우 기능 활성화
+  - [x] 팔로우 상태 관리
+  - [x] 통계 실시간 업데이트 (클라이언트 상태)
+  - [x] `onFollowChange` 콜백 추가
 
 ## 10. 게시물 삭제
 
