@@ -146,98 +146,123 @@
 
 ## 8. 프로필 페이지
 
-> 📋 **상세 개발 계획:** [session-7-profile-page.md](./session-7-profile-page.md) 참고
-
-### 8.1 API 엔드포인트
-
-- [ ] `app/api/users/[userId]/route.ts`
-  - [ ] GET: 사용자 정보 조회
-    - [ ] Clerk ID 또는 DB UUID 모두 지원
-    - [ ] user_stats 뷰 활용
-    - [ ] 현재 사용자와의 팔로우 관계 확인 (`is_following`, `is_followed_by`)
-    - [ ] 에러 처리 (404, 401)
+- [x] `app/api/users/[userId]/route.ts`
+  - [x] **단계 1: 기본 구조 설정**
+    - [x] 파일 생성 및 필요한 import 추가
+    - [x] GET 핸들러 함수 생성
+  - [x] **단계 2: userId 파라미터 처리**
+    - [x] 동적 라우트 파라미터에서 `userId` 추출
+    - [x] 에러 처리 (사용자를 찾을 수 없음: 404)
+  - [x] **단계 3: 사용자 통계 조회**
+    - [x] `user_stats` 뷰에서 사용자 정보 조회
+    - [x] 에러 처리 (404)
+  - [x] **단계 4: 팔로우 관계 확인**
+    - [x] 현재 로그인한 사용자 확인 (`auth()`)
+    - [x] 현재 사용자의 DB ID 조회
+    - [x] 팔로우 관계 조회
+    - [x] `is_following` 설정 (현재 사용자가 대상 사용자를 팔로우하는지)
+    - [x] `is_own_profile` 설정 (본인 프로필인지)
+  - [x] **단계 5: 응답 데이터 구성**
+    - [x] user_stats 데이터와 팔로우 관계 결합
+    - [x] 응답 형식에 맞게 데이터 구성
+  - [ ] **단계 6: 에러 처리 및 테스트**
+    - [ ] try-catch 블록 추가
+    - [ ] 모든 에러 케이스 처리 (404, 500)
+    - [ ] 로깅 추가
+    - [ ] 테스트 시나리오 확인
+      - [ ] DB UUID로 조회 (로그인 안 함)
+      - [ ] Clerk ID로 조회 (로그인 안 함)
+      - [ ] DB UUID로 조회 (로그인함, 팔로우 안 함)
+      - [ ] Clerk ID로 조회 (로그인함, 팔로우함)
+      - [ ] 본인 프로필 조회
+      - [ ] 존재하지 않는 사용자 조회
 
 ### 8.2 프로필 헤더 컴포넌트
 
-- [ ] `components/profile/profile-header.tsx`
-  - [ ] 프로필 이미지 표시
-    - [ ] Clerk 프로필 이미지 가져오기 (`useUser()`)
-    - [ ] 기본 아바타 (이니셜 표시)
-    - [ ] 원형, 그라데이션 테두리 (Instagram 스타일)
-    - [ ] 반응형 크기 (150px Desktop / 90px Mobile)
-  - [ ] 사용자명 표시 (`text-xl font-semibold`)
-  - [ ] 통계 표시
-    - [ ] 게시물 수, 팔로워 수, 팔로잉 수
-    - [ ] 숫자 포맷팅 (예: 1,234)
-    - [ ] 반응형 레이아웃 (Desktop: 가로 / Mobile: 세로)
-  - [ ] 버튼 구현
-    - [ ] "팔로우" 버튼 (파란색, 미팔로우 상태)
-    - [ ] "팔로잉" 버튼 (회색, 팔로우 중 상태)
-    - [ ] Hover 시 "언팔로우" (빨간 테두리)
-    - [ ] 본인 프로필일 때 버튼 숨김 (1차에서 프로필 편집 제외)
+- [x] `components/profile/profile-header.tsx`
+  - [x] 프로필 이미지 표시
+    - [x] Clerk 프로필 이미지 가져오기 (Server Component에서 전달)
+    - [x] 기본 아바타 (이니셜 표시)
+    - [x] 원형, 그라데이션 테두리 (Instagram 스타일)
+    - [x] 반응형 크기 (150px Desktop / 90px Mobile)
+  - [x] 사용자명 표시
+  - [x] 통계 표시
+    - [x] 게시물 수, 팔로워 수, 팔로잉 수
+    - [x] 숫자 포맷팅 (예: 1,234)
+    - [x] 반응형 레이아웃 (Desktop: 가로 / Mobile: 세로)
+  - [x] 버튼 구현
+    - [x] "팔로우" 버튼 (파란색, 미팔로우 상태)
+    - [x] "팔로잉" 버튼 (회색, 팔로우 중 상태)
+    - [x] Hover 시 "언팔로우" (빨간 테두리)
+    - [x] 본인 프로필일 때 "프로필 편집" 버튼 (1차에서 비활성화)
 
 ### 8.3 게시물 그리드 컴포넌트
 
-- [ ] `components/profile/post-grid.tsx`
-  - [ ] 3열 그리드 레이아웃
-    - [ ] `grid-cols-3 gap-1` (또는 `gap-px`)
-    - [ ] 반응형 (Mobile도 3열 유지, 필요 시 2열 고려)
-  - [ ] 썸네일 표시
-    - [ ] 1:1 정사각형 (`aspect-square`)
-    - [ ] Next.js Image 컴포넌트 사용
-    - [ ] `object-cover`로 이미지 채우기
-  - [ ] Hover 오버레이
-    - [ ] 반투명 검은 배경 (`bg-black/40`)
-    - [ ] 좋아요 아이콘 + 숫자
-    - [ ] 댓글 아이콘 + 숫자
-    - [ ] `group-hover`로 표시/숨김
-  - [ ] 클릭 핸들러
-    - [ ] `onPostClick` 콜백 호출
-  - [ ] 빈 상태 처리 (게시물이 없을 때)
+- [x] `components/profile/post-grid.tsx`
+  - [x] 3열 그리드 레이아웃
+    - [x] `grid-cols-3 gap-1` (또는 `gap-2`)
+    - [x] 반응형 (Mobile도 3열 유지)
+  - [x] 썸네일 표시
+    - [x] 1:1 정사각형 (`aspect-square`)
+    - [x] Next.js Image 컴포넌트 사용
+    - [x] `object-cover`로 이미지 채우기
+  - [x] Hover 오버레이
+    - [x] 반투명 검은 배경 (`bg-black/40`)
+    - [x] 좋아요 아이콘 + 숫자
+    - [x] 댓글 아이콘 + 숫자
+    - [x] `group-hover`로 표시/숨김
+  - [x] 클릭 핸들러
+    - [x] PostModal 열기
+  - [x] 빈 상태 처리 (게시물이 없을 때)
 
 ### 8.4 프로필 페이지 라우트
 
-- [ ] `app/(main)/profile/[userId]/page.tsx`
-  - [ ] 동적 라우트 생성
-  - [ ] 데이터 페칭
-    - [ ] 사용자 정보 조회 (`/api/users/[userId]`)
-    - [ ] 게시물 목록 조회 (`/api/posts?userId=xxx`)
-  - [ ] 상태 관리
-    - [ ] 사용자 정보, 게시물 목록
-    - [ ] 로딩 상태
-    - [ ] PostModal 상태
-    - [ ] 팔로우 상태
-  - [ ] 컴포넌트 통합
-    - [ ] ProfileHeader 통합
-    - [ ] PostGrid 통합
-  - [ ] PostModal 연동
-    - [ ] 게시물 클릭 시 모달 열기
-    - [ ] 모달에서 게시물 상세 표시
-  - [ ] 에러 처리
-    - [ ] 사용자를 찾을 수 없음 (404)
-    - [ ] 네트워크 에러 (재시도 버튼)
-  - [ ] 로딩 상태
+- [x] `app/(main)/profile/[userId]/page.tsx`
+  - [x] 동적 라우트 생성
+  - [x] 데이터 페칭
+    - [x] 사용자 정보 조회 (user_stats 뷰)
+    - [x] 게시물 목록 조회 (post_stats 뷰)
+  - [x] 상태 관리
+    - [x] 사용자 정보, 게시물 목록
+    - [x] PostModal 상태 (PostGrid에서 관리)
+    - [x] 팔로우 상태
+  - [x] 컴포넌트 통합
+    - [x] ProfileHeader 통합
+    - [x] PostGrid 통합
+  - [x] PostModal 연동
+    - [x] 게시물 클릭 시 모달 열기
+    - [x] 모달에서 게시물 상세 표시
+  - [x] 에러 처리
+    - [x] 사용자를 찾을 수 없음 (404)
+  - [x] 로딩 상태
     - [ ] Skeleton UI 또는 스피너
 
 ### 8.5 Sidebar 프로필 링크
 
-- [ ] `components/layout/sidebar.tsx` 확인
-  - [ ] 현재: `/profile/${user?.id}` (Clerk ID)
-  - [ ] 프로필 페이지 API에서 Clerk ID 처리 확인
-  - [ ] 필요 시 수정
+- [x] `app/(main)/profile/page.tsx` 생성
+  - [x] 본인 프로필 리다이렉트 라우트 구현
+  - [x] Clerk ID를 DB UUID로 변환하여 `/profile/[dbUserId]`로 리다이렉트
+  - [x] 로그인하지 않은 경우 `/sign-in`으로 리다이렉트
+  - [x] 사용자를 찾을 수 없는 경우 `/`로 리다이렉트
+- [x] `components/layout/sidebar.tsx` 확인
+  - [x] 프로필 링크가 `/profile`로 올바르게 설정되어 있음
+  - [x] 추가 수정 불필요
 
 ### 8.6 통합 및 테스트
 
-- [ ] 통합 테스트
-  - [ ] 본인 프로필 접근
-  - [ ] 다른 사람 프로필 접근
-  - [ ] 게시물이 없는 프로필
-  - [ ] 게시물이 많은 프로필
-  - [ ] 게시물 클릭 → 모달 열기
-  - [ ] 반응형 테스트 (Mobile/Tablet/Desktop)
-- [ ] 팔로우 기능 연동 (TODO.md ##9 완료 후)
-  - [ ] 팔로우/언팔로우 버튼 동작 확인
-  - [ ] 통계 실시간 업데이트 확인
+- [x] 통합 테스트
+  - [x] 본인 프로필 접근
+  - [x] 다른 사람 프로필 접근
+  - [x] 게시물이 없는 프로필
+  - [x] 게시물이 많은 프로필
+  - [x] 게시물 클릭 → 모달 열기
+  - [x] 반응형 테스트 (Mobile/Tablet/Desktop)
+- [x] 팔로우 기능 연동 준비 (TODO.md ##9 완료 후 활성화)
+  - [x] ProfileHeader에 팔로우 기능 코드 준비 완료 (TODO 주석으로 표시)
+  - [x] Optimistic UI 로직 구현 완료
+  - [x] 에러 처리 및 롤백 로직 준비 완료
+  - [ ] 팔로우/언팔로우 버튼 동작 확인 (TODO.md ##9 완료 후)
+  - [ ] 통계 실시간 업데이트 확인 (TODO.md ##9 완료 후)
 
 ## 9. 팔로우 기능
 

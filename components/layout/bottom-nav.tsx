@@ -55,7 +55,7 @@ export default function BottomNav({ onCreatePost }: BottomNavProps) {
       icon: Heart,
     },
     {
-      href: `/profile/${user?.id || ""}`,
+      href: "/profile",
       label: "프로필",
       icon: User,
     },

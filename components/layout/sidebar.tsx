@@ -52,7 +52,7 @@ export default function Sidebar({ onCreatePost }: SidebarProps) {
       onClick: onCreatePost,
     },
     {
-      href: `/profile/${user?.id || ""}`,
+      href: "/profile",
       label: "프로필",
       icon: User,
     },
