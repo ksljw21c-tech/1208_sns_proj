@@ -63,75 +63,75 @@
 
 ## 3. 홈 피드 페이지
 
-- [ ] `app/(main)/page.tsx` 생성
-  - [ ] PostFeed 컴포넌트 통합
-  - [ ] 배경색 #FAFAFA 설정
-- [ ] `components/post/PostCard.tsx`
-  - [ ] 헤더 (프로필 이미지 32px, 사용자명, 시간, ⋯ 메뉴)
-  - [ ] 이미지 영역 (1:1 정사각형)
-  - [ ] 액션 버튼 (좋아요, 댓글, 공유, 북마크)
-  - [ ] 좋아요 수 표시
-  - [ ] 캡션 (사용자명 Bold + 내용, 2줄 초과 시 "... 더 보기")
-  - [ ] 댓글 미리보기 (최신 2개)
-- [ ] `components/post/PostCardSkeleton.tsx`
-  - [ ] 로딩 UI (Skeleton + Shimmer 효과)
-- [ ] `components/post/PostFeed.tsx`
-  - [ ] 게시물 목록 렌더링
-  - [ ] 무한 스크롤 (Intersection Observer)
-  - [ ] 페이지네이션 (10개씩)
-- [ ] `app/api/posts/route.ts`
-  - [ ] GET: 게시물 목록 조회 (시간 역순 정렬)
-  - [ ] 페이지네이션 지원 (limit, offset)
-  - [ ] userId 파라미터 지원 (프로필 페이지용)
+- [x] `app/(main)/page.tsx` 생성
+  - [x] PostFeed 컴포넌트 통합
+  - [x] 배경색 #FAFAFA 설정 (레이아웃에서 bg-instagram으로 설정)
+- [x] `components/post/PostCard.tsx`
+  - [x] 헤더 (프로필 이미지 32px, 사용자명, 시간, ⋯ 메뉴)
+  - [x] 이미지 영역 (1:1 정사각형)
+  - [x] 액션 버튼 (좋아요, 댓글, 공유, 북마크)
+  - [x] 좋아요 수 표시
+  - [x] 캡션 (사용자명 Bold + 내용, 2줄 초과 시 "... 더 보기")
+  - [x] 댓글 미리보기 (최신 2개)
+- [x] `components/post/PostCardSkeleton.tsx`
+  - [x] 로딩 UI (Skeleton + Shimmer 효과)
+- [x] `components/post/PostFeed.tsx`
+  - [x] 게시물 목록 렌더링
+  - [x] 무한 스크롤 (Intersection Observer)
+  - [x] 페이지네이션 (10개씩)
+- [x] `app/api/posts/route.ts`
+  - [x] GET: 게시물 목록 조회 (시간 역순 정렬)
+  - [x] 페이지네이션 지원 (limit, offset)
+  - [x] userId 파라미터 지원 (프로필 페이지용)
 
 ## 4. 좋아요 기능
 
-- [ ] `app/api/likes/route.ts`
-  - [ ] POST: 좋아요 추가
-  - [ ] DELETE: 좋아요 제거
-  - [ ] 인증 검증 (Clerk)
-- [ ] `components/post/LikeButton.tsx`
-  - [ ] 빈 하트 ↔ 빨간 하트 상태 관리
-  - [ ] 클릭 애니메이션 (scale 1.3 → 1)
-  - [ ] 더블탭 좋아요 (모바일, 큰 하트 fade in/out)
-- [ ] PostCard에 LikeButton 통합
-  - [ ] 좋아요 상태 표시
-  - [ ] 좋아요 수 실시간 업데이트
+- [x] `app/api/likes/route.ts`
+  - [x] POST: 좋아요 추가
+  - [x] DELETE: 좋아요 제거
+  - [x] 인증 검증 (Clerk)
+- [x] `components/post/LikeButton.tsx`
+  - [x] 빈 하트 ↔ 빨간 하트 상태 관리
+  - [x] 클릭 애니메이션 (scale 1.3 → 1)
+  - [x] 더블탭 좋아요 (모바일, 큰 하트 fade in/out) - PostCard에서 처리
+- [x] PostCard에 LikeButton 통합
+  - [x] 좋아요 상태 표시
+  - [x] 좋아요 수 실시간 업데이트
 
 ## 5. 게시물 작성
 
-- [ ] `components/post/CreatePostModal.tsx`
-  - [ ] Dialog 컴포넌트 사용
-  - [ ] 이미지 미리보기 UI
-  - [ ] 텍스트 입력 필드 (최대 2,200자)
-  - [ ] 파일 선택 버튼
-  - [ ] 업로드 버튼
-- [ ] `app/api/posts/route.ts`
-  - [ ] POST: 게시물 생성
-  - [ ] 이미지 파일 검증 (최대 5MB)
-  - [ ] Supabase Storage 업로드
-  - [ ] posts 테이블에 데이터 저장
-  - [ ] 인증 검증 (Clerk)
-- [ ] Sidebar "만들기" 버튼 연결
-  - [ ] CreatePostModal 열기
+- [x] `components/post/CreatePostModal.tsx`
+  - [x] Dialog 컴포넌트 사용
+  - [x] 이미지 미리보기 UI
+  - [x] 텍스트 입력 필드 (최대 2,200자)
+  - [x] 파일 선택 버튼
+  - [x] 업로드 버튼
+- [x] `app/api/posts/route.ts`
+  - [x] POST: 게시물 생성
+  - [x] 이미지 파일 검증 (최대 5MB)
+  - [x] Supabase Storage 업로드
+  - [x] posts 테이블에 데이터 저장
+  - [x] 인증 검증 (Clerk)
+- [x] Sidebar "만들기" 버튼 연결
+  - [x] CreatePostModal 열기
 
 ## 6. 댓글 기능
 
-- [ ] `components/comment/CommentList.tsx`
-  - [ ] 댓글 목록 렌더링
-  - [ ] PostCard: 최신 2개만 표시
-  - [ ] 상세 모달: 전체 댓글 + 스크롤
-  - [ ] 삭제 버튼 (본인만 표시)
-- [ ] `components/comment/CommentForm.tsx`
-  - [ ] 댓글 입력 필드 ("댓글 달기...")
-  - [ ] Enter 키 또는 "게시" 버튼으로 제출
-- [ ] `app/api/comments/route.ts`
-  - [ ] POST: 댓글 작성
-  - [ ] DELETE: 댓글 삭제 (본인만)
-  - [ ] 인증 검증 (Clerk)
-- [ ] PostCard에 댓글 기능 통합
-  - [ ] CommentList 통합
-  - [ ] CommentForm 통합
+- [x] `components/comment/CommentList.tsx`
+  - [x] 댓글 목록 렌더링
+  - [x] PostCard: 최신 2개만 표시 (preview 모드)
+  - [x] 상세 모달: 전체 댓글 + 스크롤 (full 모드)
+  - [x] 삭제 버튼 (본인만 표시)
+- [x] `components/comment/CommentForm.tsx`
+  - [x] 댓글 입력 필드 ("댓글 달기...")
+  - [x] Enter 키 또는 "게시" 버튼으로 제출
+- [x] `app/api/comments/route.ts`
+  - [x] POST: 댓글 작성
+  - [x] DELETE: 댓글 삭제 (본인만)
+  - [x] 인증 검증 (Clerk)
+- [x] PostCard에 댓글 기능 통합
+  - [x] CommentList 통합
+  - [x] CommentForm 통합
 
 ## 7. 게시물 상세 모달
 
@@ -165,17 +165,17 @@
   - [x] **단계 5: 응답 데이터 구성**
     - [x] user_stats 데이터와 팔로우 관계 결합
     - [x] 응답 형식에 맞게 데이터 구성
-  - [ ] **단계 6: 에러 처리 및 테스트**
-    - [ ] try-catch 블록 추가
-    - [ ] 모든 에러 케이스 처리 (404, 500)
-    - [ ] 로깅 추가
-    - [ ] 테스트 시나리오 확인
-      - [ ] DB UUID로 조회 (로그인 안 함)
-      - [ ] Clerk ID로 조회 (로그인 안 함)
-      - [ ] DB UUID로 조회 (로그인함, 팔로우 안 함)
-      - [ ] Clerk ID로 조회 (로그인함, 팔로우함)
-      - [ ] 본인 프로필 조회
-      - [ ] 존재하지 않는 사용자 조회
+  - [x] **단계 6: 에러 처리 및 테스트**
+    - [x] try-catch 블록 추가
+    - [x] 모든 에러 케이스 처리 (404, 500)
+    - [x] 로깅 추가
+    - [x] 테스트 시나리오 확인
+      - [x] DB UUID로 조회 (로그인 안 함) - 코드 검토 완료
+      - [x] Clerk ID로 조회 (로그인 안 함) - 코드 검토 완료 (Clerk ID 변환 로직 추가)
+      - [x] DB UUID로 조회 (로그인함, 팔로우 안 함) - 코드 검토 완료
+      - [x] Clerk ID로 조회 (로그인함, 팔로우함) - 코드 검토 완료
+      - [x] 본인 프로필 조회 - 코드 검토 완료
+      - [x] 존재하지 않는 사용자 조회 - 코드 검토 완료 (404 에러 처리)
 
 ### 8.2 프로필 헤더 컴포넌트
 
