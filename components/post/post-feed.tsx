@@ -13,6 +13,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import PostCard from "./post-card";
 import PostCardSkeleton from "./post-card-skeleton";
 import PostModal from "./post-modal";
+import ErrorMessage from "@/components/ui/error-message";
+import { isNetworkError, extractErrorInfo } from "@/lib/utils/error-handler";
+import { apiFetch } from "@/lib/utils/api-client";
 import type { PostWithUser } from "@/lib/types";
 
 interface PostFeedProps {
@@ -48,12 +51,7 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
         params.append("userId", userId);
       }
 
-      const response = await fetch(`/api/posts?${params}`);
-
-      if (!response.ok) {
-        throw new Error("게시물을 불러오는데 실패했습니다.");
-      }
-
+      const response = await apiFetch(`/api/posts?${params}`);
       const data = await response.json();
       const newPosts: PostWithUser[] = data.data || [];
 
@@ -64,7 +62,8 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
       setPosts((prev) => [...prev, ...newPosts]);
       offsetRef.current += newPosts.length;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "알 수 없는 오류");
+      const errorInfo = extractErrorInfo(err);
+      setError(errorInfo.message);
       console.error("게시물 로드 에러:", err);
     } finally {
       setIsLoading(false);
@@ -101,33 +100,6 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
     };
   }, [fetchPosts, hasMore, isLoading]);
 
-  // 에러 상태
-  if (error && posts.length === 0) {
-    return (
-      <div className="bg-white rounded-lg border border-instagram p-6 text-center">
-        <p className="text-instagram-secondary mb-4">{error}</p>
-        <button
-          onClick={() => {
-            setError(null);
-            fetchPosts();
-          }}
-          className="btn-instagram"
-        >
-          다시 시도
-        </button>
-      </div>
-    );
-  }
-
-  // 빈 상태
-  if (!isLoading && posts.length === 0) {
-    return (
-      <div className="bg-white rounded-lg border border-instagram p-6 text-center">
-        <p className="text-instagram-secondary">아직 게시물이 없습니다.</p>
-      </div>
-    );
-  }
-
   // 선택된 게시물 찾기
   const selectedPost = selectedPostId
     ? posts.find((p) => p.id === selectedPostId) || null
@@ -151,7 +123,6 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
   // 게시물 삭제 핸들러
   const handleDeletePost = useCallback((postId: string) => {
     // Optimistic UI: 즉시 목록에서 제거
-    const deletedPost = posts.find((p) => p.id === postId);
     setPosts((prev) => prev.filter((p) => p.id !== postId));
 
     // 모달이 열려있고 삭제된 게시물이면 모달 닫기
@@ -161,7 +132,31 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
 
     // 실패 시 롤백은 PostCard/PostModal에서 처리
     // (API 호출이 실패하면 에러 메시지 표시 후 롤백)
-  }, [posts, selectedPostId]);
+  }, [selectedPostId]);
+
+  // 에러 상태
+  if (error && posts.length === 0) {
+    return (
+      <ErrorMessage
+        message={error}
+        errorType={isNetworkError(error) ? "network" : "server"}
+        onRetry={() => {
+          setError(null);
+          fetchPosts();
+        }}
+        className="max-w-2xl mx-auto"
+      />
+    );
+  }
+
+  // 빈 상태
+  if (!isLoading && posts.length === 0) {
+    return (
+      <div className="bg-white rounded-lg border border-instagram p-6 text-center">
+        <p className="text-instagram-secondary">아직 게시물이 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -185,11 +180,22 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
         )}
 
         {/* 무한 스크롤 트리거 */}
-        {hasMore && <div ref={observerRef} className="h-4" />}
+        {hasMore && (
+          <div
+            ref={observerRef}
+            className="h-4"
+            aria-label="더 많은 게시물 로드"
+            aria-live="polite"
+          />
+        )}
 
         {/* 더 이상 게시물 없음 */}
         {!hasMore && posts.length > 0 && (
-          <div className="text-center py-8">
+          <div
+            className="text-center py-8"
+            role="status"
+            aria-live="polite"
+          >
             <p className="text-instagram-secondary text-sm">
               모든 게시물을 확인했습니다.
             </p>

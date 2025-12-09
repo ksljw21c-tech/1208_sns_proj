@@ -11,7 +11,11 @@ import { cn } from "@/lib/utils";
 
 export default function ProfileHeaderSkeleton() {
   return (
-    <div className="border-b border-instagram pb-8">
+    <div
+      className="border-b border-instagram pb-8"
+      aria-busy="true"
+      aria-label="프로필 헤더 로딩 중"
+    >
       <div
         className={cn(
           "flex gap-8",

@@ -13,11 +13,16 @@ export default function PostGridSkeleton() {
   const skeletonCount = 6;
 
   return (
-    <div className="grid grid-cols-3 gap-1 md:gap-2">
+    <div
+      className="grid grid-cols-3 gap-1 md:gap-2"
+      aria-busy="true"
+      aria-label="게시물 그리드 로딩 중"
+    >
       {Array.from({ length: skeletonCount }).map((_, index) => (
         <div
           key={index}
           className="aspect-square bg-gray-200 skeleton-shimmer"
+          aria-hidden="true"
         />
       ))}
     </div>

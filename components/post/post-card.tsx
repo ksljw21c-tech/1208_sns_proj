@@ -14,12 +14,12 @@
 
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, memo, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Send, Bookmark, Heart, Trash2 } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Send, Bookmark, Heart } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
-import { cn, formatRelativeTime, formatNumber } from "@/lib/utils";
+import { formatRelativeTime, formatNumber } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,9 @@ import { Button } from "@/components/ui/button";
 import LikeButton from "./like-button";
 import CommentList from "@/components/comment/comment-list";
 import CommentForm from "@/components/comment/comment-form";
+import { extractErrorInfo } from "@/lib/utils/error-handler";
+import { useToastContext } from "@/components/providers/toast-provider";
+import { apiFetch } from "@/lib/utils/api-client";
 import type { PostWithUser, CommentWithUser } from "@/lib/types";
 
 interface PostCardProps {
@@ -41,8 +44,9 @@ interface PostCardProps {
   onDelete?: (postId: string) => void;
 }
 
-export default function PostCard({ post, comments: initialComments = [], onCommentClick, onDelete }: PostCardProps) {
+function PostCard({ post, comments: initialComments = [], onCommentClick, onDelete }: PostCardProps) {
   const { user } = useUser();
+  const { showError } = useToastContext();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likeCount, setLikeCount] = useState(post.likes_count);
   const [showFullCaption, setShowFullCaption] = useState(false);
@@ -50,7 +54,6 @@ export default function PostCard({ post, comments: initialComments = [], onComme
   const [comments, setComments] = useState<CommentWithUser[]>(initialComments);
   const [commentCount, setCommentCount] = useState(post.comments_count);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const lastTapRef = useRef<number>(0);
@@ -78,7 +81,7 @@ export default function PostCard({ post, comments: initialComments = [], onComme
         setLikeCount((prev) => prev + 1);
 
         try {
-          await fetch("/api/likes", {
+          await apiFetch("/api/likes", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ post_id: post.id }),
@@ -87,7 +90,8 @@ export default function PostCard({ post, comments: initialComments = [], onComme
           // 실패 시 롤백
           setIsLiked(false);
           setLikeCount((prev) => prev - 1);
-          console.error("더블탭 좋아요 에러:", error);
+          const errorInfo = extractErrorInfo(error);
+          showError(errorInfo.message);
         }
       }
 
@@ -109,7 +113,7 @@ export default function PostCard({ post, comments: initialComments = [], onComme
     }
 
     lastTapRef.current = now;
-  }, [isLiked, post.id, onCommentClick]);
+  }, [isLiked, post.id, onCommentClick, showError]);
 
   // 좋아요 상태 변경 핸들러
   const handleLikeChange = useCallback((liked: boolean, count: number) => {
@@ -123,18 +127,14 @@ export default function PostCard({ post, comments: initialComments = [], onComme
       setIsSubmittingComment(true);
 
       try {
-        const response = await fetch("/api/comments", {
+        const response = await apiFetch("/api/comments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ post_id: post.id, content }),
         });
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "댓글 작성에 실패했습니다.");
-        }
-
-        const { data: newComment } = await response.json();
+        const data = await response.json();
+        const newComment = data.data;
 
         // 댓글 목록에 추가 (최신 댓글이 뒤에)
         setComments((prev) => [...prev, newComment]);
@@ -146,58 +146,19 @@ export default function PostCard({ post, comments: initialComments = [], onComme
         setIsSubmittingComment(false);
       }
     },
-    [post.id]
+    [post.id] // showError는 사용하지 않으므로 의존성 배열에 포함하지 않음
   );
 
-  // 댓글 삭제 핸들러
-  const handleCommentDelete = useCallback(async (commentId: string) => {
-    setDeletingCommentId(commentId);
-
-    // Optimistic UI - 먼저 목록에서 제거
-    const deletedComment = comments.find((c) => c.id === commentId);
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-    setCommentCount((prev) => prev - 1);
-
-    try {
-      const response = await fetch("/api/comments", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ comment_id: commentId }),
-      });
-
-      if (!response.ok) {
-        // 실패 시 롤백
-        if (deletedComment) {
-          setComments((prev) => [...prev, deletedComment]);
-          setCommentCount((prev) => prev + 1);
-        }
-        console.error("댓글 삭제 실패");
-      }
-    } catch (error) {
-      // 에러 시 롤백
-      if (deletedComment) {
-        setComments((prev) => [...prev, deletedComment]);
-        setCommentCount((prev) => prev + 1);
-      }
-      console.error("댓글 삭제 에러:", error);
-    } finally {
-      setDeletingCommentId(null);
-    }
-  }, [comments]);
+  // 댓글 삭제 핸들러는 CommentList에서 직접 처리
 
   // 게시물 삭제 핸들러
   const handleDeletePost = useCallback(async () => {
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/posts/${post.id}`, {
+      await apiFetch(`/api/posts/${post.id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "게시물 삭제에 실패했습니다.");
-      }
 
       // 성공 시 다이얼로그 닫기 및 부모 컴포넌트에 알림
       setShowDeleteDialog(false);
@@ -205,15 +166,25 @@ export default function PostCard({ post, comments: initialComments = [], onComme
         onDelete(post.id);
       }
     } catch (error) {
+      const errorInfo = extractErrorInfo(error);
       console.error("게시물 삭제 에러:", error);
-      alert(error instanceof Error ? error.message : "게시물 삭제에 실패했습니다.");
+      showError(errorInfo.message);
     } finally {
       setIsDeleting(false);
     }
-  }, [post.id, onDelete]);
+  }, [post.id, onDelete, showError]);
 
-  // 캡션이 긴지 확인 (대략 100자 이상)
-  const isLongCaption = post.caption && post.caption.length > 100;
+  // 캡션이 긴지 확인 (대략 100자 이상) - useMemo로 최적화
+  const isLongCaption = useMemo(
+    () => post.caption && post.caption.length > 100,
+    [post.caption]
+  );
+
+  // 시간 포맷팅 - useMemo로 최적화
+  const formattedTime = useMemo(
+    () => formatRelativeTime(post.created_at),
+    [post.created_at]
+  );
 
   return (
     <article className="bg-white border border-instagram rounded-lg overflow-hidden">
@@ -245,15 +216,15 @@ export default function PostCard({ post, comments: initialComments = [], onComme
         {/* 시간 + 더보기 메뉴 */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-instagram-secondary">
-            {formatRelativeTime(post.created_at)}
+            {formattedTime}
           </span>
           {isOwner && (
             <button
               onClick={() => setShowDeleteDialog(true)}
-              className="p-1 hover:opacity-70 transition-opacity"
+              className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
               aria-label="더보기"
             >
-              <MoreHorizontal className="w-5 h-5" />
+              <MoreHorizontal className="w-5 h-5" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -270,7 +241,7 @@ export default function PostCard({ post, comments: initialComments = [], onComme
           fill
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 630px"
-          priority={false}
+          loading="lazy"
         />
 
         {/* 더블탭 하트 애니메이션 */}
@@ -298,27 +269,31 @@ export default function PostCard({ post, comments: initialComments = [], onComme
           {/* 댓글 버튼 */}
           <button
             onClick={onCommentClick}
-            className="p-1 hover:opacity-70 transition-opacity"
+            className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
             aria-label="댓글"
           >
-            <MessageCircle className="w-6 h-6" strokeWidth={1.5} />
+            <MessageCircle className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
           </button>
 
           {/* 공유 버튼 (UI만) */}
           <button
-            className="p-1 hover:opacity-70 transition-opacity"
+            className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
             aria-label="공유"
+            disabled
+            aria-disabled="true"
           >
-            <Send className="w-6 h-6" strokeWidth={1.5} />
+            <Send className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
 
         {/* 북마크 버튼 (UI만) */}
         <button
-          className="p-1 hover:opacity-70 transition-opacity"
+          className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
           aria-label="저장"
+          disabled
+          aria-disabled="true"
         >
-          <Bookmark className="w-6 h-6" strokeWidth={1.5} />
+          <Bookmark className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
         </button>
       </div>
 
@@ -346,7 +321,8 @@ export default function PostCard({ post, comments: initialComments = [], onComme
                 {post.caption.slice(0, 100)}...
                 <button
                   onClick={() => setShowFullCaption(true)}
-                  className="text-instagram-secondary ml-1"
+                  className="text-instagram-secondary ml-1 hover:underline focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+                  aria-label="캡션 전체 보기"
                 >
                   더 보기
                 </button>
@@ -363,7 +339,8 @@ export default function PostCard({ post, comments: initialComments = [], onComme
           {commentCount > 2 && (
             <button
               onClick={onCommentClick}
-              className="text-sm text-instagram-secondary mb-1"
+              className="text-sm text-instagram-secondary mb-1 hover:underline focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+              aria-label={`댓글 ${formatNumber(commentCount)}개 모두 보기`}
             >
               댓글 {formatNumber(commentCount)}개 모두 보기
             </button>
@@ -416,3 +393,15 @@ export default function PostCard({ post, comments: initialComments = [], onComme
     </article>
   );
 }
+
+// props 비교 함수 (필요시)
+const areEqual = (prevProps: PostCardProps, nextProps: PostCardProps) => {
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.likes_count === nextProps.post.likes_count &&
+    prevProps.post.comments_count === nextProps.post.comments_count &&
+    prevProps.comments?.length === nextProps.comments?.length
+  );
+};
+
+export default memo(PostCard, areEqual);

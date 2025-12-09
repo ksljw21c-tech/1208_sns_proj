@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { getErrorMessage, logError, extractErrorInfo } from "@/lib/utils/error-handler";
 
 export async function GET(
   request: NextRequest,
@@ -36,9 +37,9 @@ export async function GET(
       .single();
 
     if (userStatsError || !userStats) {
-      console.error("사용자 조회 에러:", userStatsError);
+      logError(userStatsError, "사용자 통계 조회");
       return NextResponse.json(
-        { error: "사용자를 찾을 수 없습니다." },
+        { error: getErrorMessage(404, "사용자를 찾을 수 없습니다.") },
         { status: 404 }
       );
     }
@@ -89,10 +90,11 @@ export async function GET(
 
     return NextResponse.json({ data: response });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "사용자 정보 조회 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }

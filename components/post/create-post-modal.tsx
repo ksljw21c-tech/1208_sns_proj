@@ -22,6 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { extractErrorInfo } from "@/lib/utils/error-handler";
+import { apiFetch } from "@/lib/utils/api-client";
 
 interface CreatePostModalProps {
   open: boolean;
@@ -146,22 +148,17 @@ export default function CreatePostModal({
       formData.append("image", selectedFile);
       formData.append("caption", caption);
 
-      const response = await fetch("/api/posts", {
+      await apiFetch("/api/posts", {
         method: "POST",
         body: formData,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "게시물 업로드에 실패했습니다.");
-      }
 
       // 성공
       handleClose();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+      const errorInfo = extractErrorInfo(err);
+      setError(errorInfo.message);
     } finally {
       setIsUploading(false);
     }
@@ -201,11 +198,16 @@ export default function CreatePostModal({
                   또는 클릭하여 선택
                 </p>
               </div>
+              <label htmlFor="file-input" className="sr-only">
+                이미지 파일 선택
+              </label>
               <input
+                id="file-input"
                 ref={fileInputRef}
                 type="file"
                 accept={ACCEPTED_IMAGE_TYPES.join(",")}
                 onChange={handleFileInputChange}
+                aria-label="이미지 파일 선택"
                 className="hidden"
               />
             </div>
@@ -232,14 +234,24 @@ export default function CreatePostModal({
           {/* 캡션 입력 */}
           {previewUrl && (
             <div className="p-4 border-t border-instagram">
+              <label htmlFor="caption-input" className="sr-only">
+                게시물 문구 입력
+              </label>
               <Textarea
+                id="caption-input"
                 placeholder="문구 입력..."
                 value={caption}
                 onChange={(e) => setCaption(e.target.value.slice(0, MAX_CAPTION_LENGTH))}
+                aria-label="게시물 문구 입력"
+                aria-describedby="caption-length"
                 className="min-h-[100px] resize-none border-0 focus-visible:ring-0 p-0"
                 maxLength={MAX_CAPTION_LENGTH}
               />
-              <div className="text-right text-xs text-instagram-secondary mt-1">
+              <div
+                id="caption-length"
+                className="text-right text-xs text-instagram-secondary mt-1"
+                aria-live="polite"
+              >
                 {caption.length}/{MAX_CAPTION_LENGTH}
               </div>
             </div>

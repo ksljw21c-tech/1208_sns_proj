@@ -21,7 +21,6 @@ interface CommentFormProps {
 }
 
 export default function CommentForm({
-  postId,
   onSubmit,
   isSubmitting = false,
   autoFocus = false,
@@ -66,9 +65,15 @@ export default function CommentForm({
 
   const canSubmit = content.trim().length > 0 && !isSubmitting;
 
+  const inputId = `comment-input-${Date.now()}`;
+
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <label htmlFor={inputId} className="sr-only">
+        댓글 입력
+      </label>
       <input
+        id={inputId}
         ref={inputRef}
         type="text"
         value={content}
@@ -76,9 +81,12 @@ export default function CommentForm({
         onKeyDown={handleKeyDown}
         placeholder="댓글 달기..."
         disabled={isSubmitting}
+        aria-label="댓글 입력"
+        aria-required="false"
         className={cn(
           "flex-1 text-sm bg-transparent outline-none",
           "placeholder:text-instagram-secondary",
+          "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2",
           isSubmitting && "opacity-50"
         )}
         maxLength={500}

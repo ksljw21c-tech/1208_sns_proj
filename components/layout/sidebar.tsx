@@ -31,7 +31,6 @@ interface SidebarProps {
 
 export default function Sidebar({ onCreatePost }: SidebarProps) {
   const pathname = usePathname();
-  const { user } = useUser();
 
   // 네비게이션 메뉴 항목
   const navItems: NavItem[] = [
@@ -97,13 +96,15 @@ export default function Sidebar({ onCreatePost }: SidebarProps) {
                 <li key={item.label}>
                   <button
                     onClick={item.onClick}
+                    aria-label={item.label}
                     className={cn(
                       "w-full flex items-center gap-4 p-3 rounded-lg",
                       "hover:bg-gray-100 transition-colors",
+                      "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none",
                       "lg:justify-start justify-center"
                     )}
                   >
-                    <Icon className="w-6 h-6" strokeWidth={1.5} />
+                    <Icon className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
                     <span className="hidden lg:block text-base">
                       {item.label}
                     </span>
@@ -116,9 +117,12 @@ export default function Sidebar({ onCreatePost }: SidebarProps) {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-4 p-3 rounded-lg",
                     "hover:bg-gray-100 transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none",
                     "lg:justify-start justify-center",
                     isActive && "font-bold"
                   )}
@@ -126,6 +130,7 @@ export default function Sidebar({ onCreatePost }: SidebarProps) {
                   <Icon
                     className="w-6 h-6"
                     strokeWidth={isActive ? 2.5 : 1.5}
+                    aria-hidden="true"
                   />
                   <span className="hidden lg:block text-base">{item.label}</span>
                 </Link>

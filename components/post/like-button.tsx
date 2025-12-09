@@ -13,6 +13,9 @@
 import { useState, useCallback } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { extractErrorInfo } from "@/lib/utils/error-handler";
+import { useToastContext } from "@/components/providers/toast-provider";
+import { apiFetch } from "@/lib/utils/api-client";
 
 interface LikeButtonProps {
   postId: string;
@@ -27,6 +30,7 @@ export default function LikeButton({
   initialCount,
   onLikeChange,
 }: LikeButtonProps) {
+  const { showError } = useToastContext();
   const [isLiked, setIsLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialCount);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -49,7 +53,7 @@ export default function LikeButton({
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/likes", {
+      await apiFetch("/api/likes", {
         method: newLiked ? "POST" : "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -57,25 +61,19 @@ export default function LikeButton({
         body: JSON.stringify({ post_id: postId }),
       });
 
-      if (!response.ok) {
-        // 실패 시 롤백
-        setIsLiked(!newLiked);
-        setLikeCount(newLiked ? newCount - 1 : newCount + 1);
-        console.error("좋아요 처리 실패");
-        return;
-      }
-
       // 성공 시 콜백 호출
       onLikeChange?.(newLiked, newCount);
     } catch (error) {
       // 에러 시 롤백
       setIsLiked(!newLiked);
       setLikeCount(newLiked ? newCount - 1 : newCount + 1);
+      const errorInfo = extractErrorInfo(error);
       console.error("좋아요 처리 에러:", error);
+      showError(errorInfo.message);
     } finally {
       setIsLoading(false);
     }
-  }, [isLiked, likeCount, isLoading, postId, onLikeChange]);
+  }, [isLiked, likeCount, isLoading, postId, onLikeChange, showError]);
 
   return (
     <button
@@ -83,9 +81,11 @@ export default function LikeButton({
       disabled={isLoading}
       className={cn(
         "p-1 -ml-1 transition-transform",
+        "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded",
         isAnimating && "like-animation"
       )}
       aria-label={isLiked ? "좋아요 취소" : "좋아요"}
+      aria-pressed={isLiked}
     >
       <Heart
         className={cn(
@@ -95,6 +95,7 @@ export default function LikeButton({
             : "text-instagram hover:text-instagram-secondary"
         )}
         strokeWidth={isLiked ? 0 : 1.5}
+        aria-hidden="true"
       />
     </button>
   );

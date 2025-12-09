@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { getErrorMessage, logError, extractErrorInfo } from "@/lib/utils/error-handler";
 
 /**
  * POST /api/follows - 팔로우 추가
@@ -103,9 +104,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.error("팔로우 추가 에러:", followError);
+      logError(followError, "팔로우 추가");
       return NextResponse.json(
-        { error: "팔로우 처리에 실패했습니다." },
+        { error: getErrorMessage(500, "팔로우 처리에 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -115,10 +116,11 @@ export async function POST(request: NextRequest) {
       data: followData,
     });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "팔로우 추가 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }
@@ -173,19 +175,20 @@ export async function DELETE(request: NextRequest) {
       .eq("following_id", user_id);
 
     if (deleteError) {
-      console.error("팔로우 삭제 에러:", deleteError);
+      logError(deleteError, "팔로우 삭제");
       return NextResponse.json(
-        { error: "팔로우 취소에 실패했습니다." },
+        { error: getErrorMessage(500, "팔로우 취소에 실패했습니다.") },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "팔로우 삭제 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }

@@ -10,9 +10,9 @@
 
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, memo } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { formatRelativeTime } from "@/lib/utils";
 import type { CommentWithUser } from "@/lib/types";
@@ -24,7 +24,7 @@ interface CommentListProps {
   isDeleting?: string | null; // 삭제 중인 댓글 ID
 }
 
-export default function CommentList({
+function CommentList({
   comments,
   mode = "preview",
   onDelete,
@@ -87,10 +87,11 @@ export default function CommentList({
               <button
                 onClick={() => handleDelete(comment.id)}
                 disabled={isCurrentlyDeleting}
-                className="opacity-0 group-hover:opacity-100 p-1 text-instagram-secondary hover:text-red-500 transition-all"
+                className="opacity-0 group-hover:opacity-100 p-1 text-instagram-secondary hover:text-red-500 transition-all focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:outline-none rounded"
                 aria-label="댓글 삭제"
+                aria-busy={isCurrentlyDeleting}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -99,4 +100,19 @@ export default function CommentList({
     </div>
   );
 }
+
+// props 비교 함수 (성능 최적화)
+const areEqual = (prevProps: CommentListProps, nextProps: CommentListProps) => {
+  // comments 배열이 같은 길이이고 모든 comment.id가 같으면 리렌더링 방지
+  if (prevProps.comments.length !== nextProps.comments.length) return false;
+  if (prevProps.mode !== nextProps.mode) return false;
+  if (prevProps.isDeleting !== nextProps.isDeleting) return false;
+  
+  return prevProps.comments.every((comment, index) => {
+    const nextComment = nextProps.comments[index];
+    return comment.id === nextComment.id && comment.content === nextComment.content;
+  });
+};
+
+export default memo(CommentList, areEqual);
 

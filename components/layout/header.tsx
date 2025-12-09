@@ -28,18 +28,22 @@ export default function Header() {
         <div className="flex items-center gap-4">
           {/* 알림 아이콘 (1차 MVP 제외 - UI만 표시) */}
           <button
-            className="p-1 hover:opacity-70 transition-opacity"
+            className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
             aria-label="알림"
+            disabled
+            aria-disabled="true"
           >
-            <Heart className="w-6 h-6" strokeWidth={1.5} />
+            <Heart className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
           </button>
 
           {/* DM 아이콘 (1차 MVP 제외 - UI만 표시) */}
           <button
-            className="p-1 hover:opacity-70 transition-opacity"
+            className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
             aria-label="메시지"
+            disabled
+            aria-disabled="true"
           >
-            <Send className="w-6 h-6" strokeWidth={1.5} />
+            <Send className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
           </button>
 
           {/* 프로필/로그인 */}

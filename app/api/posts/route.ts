@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { getErrorMessage, logError, extractErrorInfo } from "@/lib/utils/error-handler";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -71,9 +72,9 @@ export async function GET(request: NextRequest) {
     const { data: posts, error: postsError } = await query;
 
     if (postsError) {
-      console.error("게시물 조회 에러:", postsError);
+      logError(postsError, "게시물 조회");
       return NextResponse.json(
-        { error: "게시물을 불러오는데 실패했습니다." },
+        { error: getErrorMessage(500, "게시물을 불러오는데 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -129,10 +130,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: postsWithUser });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "게시물 목록 조회 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }
@@ -196,9 +198,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (userError || !userData) {
-      console.error("사용자 조회 에러:", userError);
+      logError(userError, "사용자 조회");
       return NextResponse.json(
-        { error: "사용자를 찾을 수 없습니다." },
+        { error: getErrorMessage(404, "사용자를 찾을 수 없습니다.") },
         { status: 404 }
       );
     }
@@ -213,7 +215,7 @@ export async function POST(request: NextRequest) {
     const storagePath = `${clerkUserId}/posts/${timestamp}_${safeFileName}`;
 
     // Supabase Storage에 업로드
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("uploads")
       .upload(storagePath, buffer, {
         contentType: imageFile.type,
@@ -221,9 +223,9 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("이미지 업로드 에러:", uploadError);
+      logError(uploadError, "이미지 업로드");
       return NextResponse.json(
-        { error: "이미지 업로드에 실패했습니다." },
+        { error: getErrorMessage(500, "이미지 업로드에 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -247,11 +249,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (postError) {
-      console.error("게시물 생성 에러:", postError);
+      logError(postError, "게시물 생성");
       // 업로드된 이미지 삭제 (롤백)
-      await supabase.storage.from("uploads").remove([storagePath]);
+      await supabase.storage.from("uploads").remove([storagePath]).catch(() => {
+        // Storage 삭제 실패는 무시
+      });
       return NextResponse.json(
-        { error: "게시물 생성에 실패했습니다." },
+        { error: getErrorMessage(500, "게시물 생성에 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -261,10 +265,11 @@ export async function POST(request: NextRequest) {
       data: postData,
     });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "게시물 생성 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }

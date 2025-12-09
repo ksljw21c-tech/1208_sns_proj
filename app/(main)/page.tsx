@@ -17,20 +17,24 @@ export default function HomePage() {
     <div className="space-y-4">
       {/* 비로그인 상태 */}
       <SignedOut>
-        <div className="bg-white rounded-lg border border-instagram p-6 text-center">
-          <h2 className="text-xl font-semibold mb-2">Instagram에 오신 것을 환영합니다</h2>
+        <section className="bg-white rounded-lg border border-instagram p-6 text-center" aria-labelledby="welcome-heading">
+          <h2 id="welcome-heading" className="text-xl font-semibold mb-2">
+            Instagram에 오신 것을 환영합니다
+          </h2>
           <p className="text-instagram-secondary mb-4">
             피드를 보려면 로그인해 주세요.
           </p>
           <SignInButton mode="modal">
             <Button className="btn-instagram">로그인</Button>
           </SignInButton>
-        </div>
+        </section>
       </SignedOut>
 
       {/* 로그인 상태 - 피드 표시 */}
       <SignedIn>
-        <PostFeed />
+        <section aria-label="게시물 피드">
+          <PostFeed />
+        </section>
       </SignedIn>
     </div>
   );

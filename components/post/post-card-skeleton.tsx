@@ -9,7 +9,11 @@
 
 export default function PostCardSkeleton() {
   return (
-    <article className="bg-white border border-instagram rounded-lg overflow-hidden">
+    <article
+      className="bg-white border border-instagram rounded-lg overflow-hidden"
+      aria-busy="true"
+      aria-label="게시물 로딩 중"
+    >
       {/* 헤더 스켈레톤 */}
       <header className="flex items-center justify-between p-3 h-[60px]">
         <div className="flex items-center gap-3">

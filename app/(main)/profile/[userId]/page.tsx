@@ -7,7 +7,7 @@
  * - 본인 프로필도 동일한 페이지 사용
  */
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
 import ProfileHeader from "@/components/profile/profile-header";
@@ -105,7 +105,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   // 사용자 정보 조회 (게시물 작성자)
   const { data: userData } = await supabase
     .from("users")
-    .select("id, clerk_id, name")
+    .select("id, clerk_id, name, created_at")
     .eq("id", userId)
     .single();
 
@@ -133,12 +133,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       updated_at: post.created_at, // post_stats 뷰에는 updated_at이 없음
       likes_count: post.likes_count || 0,
       comments_count: post.comments_count || 0,
-      user: userData || {
-        id: userId,
-        clerk_id: userStats.clerk_id,
-        name: userStats.name,
-        created_at: "",
-      },
+      user: userData
+        ? {
+            id: userData.id,
+            clerk_id: userData.clerk_id,
+            name: userData.name,
+            created_at: userData.created_at,
+          }
+        : {
+            id: userId,
+            clerk_id: userStats.clerk_id,
+            name: userStats.name,
+            created_at: new Date().toISOString(),
+          },
       is_liked: likedPostIds.has(post.post_id),
     })) || [];
 
@@ -154,34 +161,15 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         isFollowing={isFollowing}
         isOwnProfile={isOwnProfile}
         profileImageUrl={profileImageUrl}
-        onFollowChange={(isFollowing, newFollowersCount) => {
-          // 팔로우 상태 변경 및 통계 실시간 업데이트 확인
-          console.group("통계 실시간 업데이트 확인");
-          console.log("✅ 팔로우 상태 변경:", {
-            이전상태: isFollowing ? false : true,
-            현재상태: isFollowing,
-            액션: isFollowing ? "팔로우 추가" : "언팔로우",
-          });
-          console.log("✅ 팔로워 수 업데이트:", {
-            이전팔로워수: followersCount,
-            현재팔로워수: newFollowersCount,
-            변경량: newFollowersCount - followersCount,
-            예상변경: isFollowing ? 1 : -1,
-            일치여부: newFollowersCount - followersCount === (isFollowing ? 1 : -1) ? "✅ 일치" : "❌ 불일치",
-          });
-          console.log("통계 실시간 업데이트:", {
-            게시물수: postsCount,
-            팔로워수: newFollowersCount,
-            팔로잉수: followingCount,
-          });
-          console.groupEnd();
+        onFollowChange={() => {
+          // 팔로우 상태 변경 시 통계는 ProfileHeader에서 Optimistic UI로 처리됨
         }}
       />
 
       {/* 게시물 그리드 */}
-      <div className="mt-8">
+      <section className="mt-8" aria-label={`${userStats.name}님의 게시물`}>
         <PostGrid posts={posts} userId={userId} />
-      </div>
+      </section>
     </div>
   );
 }

@@ -12,9 +12,12 @@
 
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import Image from "next/image";
 import { cn, formatNumber } from "@/lib/utils";
+import { extractErrorInfo } from "@/lib/utils/error-handler";
+import { useToastContext } from "@/components/providers/toast-provider";
+import { apiFetch } from "@/lib/utils/api-client";
 
 interface ProfileHeaderProps {
   userId: string;
@@ -39,6 +42,7 @@ export default function ProfileHeader({
   profileImageUrl,
   onFollowChange,
 }: ProfileHeaderProps) {
+  const { showError } = useToastContext();
   const [isFollowingState, setIsFollowingState] = useState(isFollowing);
   const [followersCountState, setFollowersCountState] = useState(followersCount);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,51 +69,23 @@ export default function ProfileHeader({
     setFollowersCountState(newFollowersCount);
 
     try {
-      const response = await fetch("/api/follows", {
+      await apiFetch("/api/follows", {
         method: newFollowing ? "POST" : "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId }),
       });
 
-      if (!response.ok) {
-        // 실패 시 롤백
-        setIsFollowingState(!newFollowing);
-        setFollowersCountState(
-          newFollowing ? newFollowersCount - 1 : newFollowersCount + 1
-        );
-        
-        // 에러 메시지 로깅
-        const errorData = await response.json().catch(() => ({}));
-        console.error("팔로우 API 에러:", errorData.error || "알 수 없는 에러");
-        return;
-      }
-
       // 성공 시 콜백 호출
       onFollowChange?.(newFollowing, newFollowersCount);
-
-      // 성공 로깅 (개발 환경에서 동작 확인용)
-      console.group("팔로우 기능 동작 확인");
-      console.log("✅ 팔로우 상태 변경 성공");
-      console.log("변경 전 상태:", {
-        isFollowing: isFollowingState,
-        followersCount: followersCountState,
-      });
-      console.log("변경 후 상태:", {
-        isFollowing: newFollowing,
-        followersCount: newFollowersCount,
-      });
-      console.log("통계 업데이트:", {
-        팔로워수변경: newFollowing ? "+1" : "-1",
-        현재팔로워수: newFollowersCount,
-      });
-      console.groupEnd();
     } catch (error) {
       // 에러 시 롤백
       setIsFollowingState(!newFollowing);
       setFollowersCountState(
         newFollowing ? newFollowersCount - 1 : newFollowersCount + 1
       );
+      const errorInfo = extractErrorInfo(error);
       console.error("팔로우 처리 에러:", error);
+      showError(errorInfo.message);
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +96,7 @@ export default function ProfileHeader({
     followersCountState,
     userId,
     onFollowChange,
+    showError,
   ]);
 
   return (
@@ -134,14 +111,21 @@ export default function ProfileHeader({
         {/* 프로필 이미지 */}
         <div className="flex-shrink-0">
           {profileImageUrl ? (
-            <img
-              src={profileImageUrl}
-              alt={name}
+            <div
               className={cn(
-                "rounded-full object-cover",
+                "relative rounded-full overflow-hidden",
                 "w-[90px] h-[90px] md:w-[120px] md:h-[120px] lg:w-[150px] lg:h-[150px]"
               )}
-            />
+            >
+              <Image
+                src={profileImageUrl}
+                alt={name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 90px, (max-width: 1024px) 120px, 150px"
+                loading="lazy"
+              />
+            </div>
           ) : (
             <div
               className={cn(
@@ -168,9 +152,10 @@ export default function ProfileHeader({
             {isOwnProfile ? (
               // 본인 프로필: 프로필 편집 버튼 (1차 제외)
               <button
-                className="px-4 py-1.5 text-sm font-semibold border border-instagram rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-1.5 text-sm font-semibold border border-instagram rounded-lg hover:bg-gray-50 transition-colors focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none"
                 disabled
                 aria-label="프로필 편집"
+                aria-disabled="true"
               >
                 프로필 편집
               </button>
@@ -182,11 +167,13 @@ export default function ProfileHeader({
                 className={cn(
                   "px-4 py-1.5 text-sm font-semibold rounded-lg transition-all",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none",
                   isFollowingState
                     ? "bg-gray-200 text-instagram hover:border-red-500 hover:border-2 hover:bg-white hover:text-red-500"
                     : "btn-instagram text-white"
                 )}
                 aria-label={isFollowingState ? "언팔로우" : "팔로우"}
+                aria-busy={isLoading}
               >
                 {isLoading
                   ? "처리 중..."
@@ -200,18 +187,18 @@ export default function ProfileHeader({
           {/* 통계 */}
           <div className="flex items-center gap-6 mb-4">
             <div className="flex items-center gap-1">
-              <span className="font-semibold">{formatNumber(postsCount)}</span>
+              <span className="font-semibold">{useMemo(() => formatNumber(postsCount), [postsCount])}</span>
               <span className="text-instagram-secondary">게시물</span>
             </div>
             <button className="flex items-center gap-1 hover:opacity-70 transition-opacity">
               <span className="font-semibold">
-                {formatNumber(followersCountState)}
+                {useMemo(() => formatNumber(followersCountState), [followersCountState])}
               </span>
               <span className="text-instagram-secondary">팔로워</span>
             </button>
             <button className="flex items-center gap-1 hover:opacity-70 transition-opacity">
               <span className="font-semibold">
-                {formatNumber(followingCount)}
+                {useMemo(() => formatNumber(followingCount), [followingCount])}
               </span>
               <span className="text-instagram-secondary">팔로잉</span>
             </button>

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { getErrorMessage, logError, extractErrorInfo } from "@/lib/utils/error-handler";
 
 /**
  * POST /api/likes - 좋아요 추가
@@ -86,9 +87,9 @@ export async function POST(request: NextRequest) {
 
     if (likeError && likeError.code !== "23505") {
       // 23505는 unique violation (이미 좋아요한 경우)
-      console.error("좋아요 추가 에러:", likeError);
+      logError(likeError, "좋아요 추가");
       return NextResponse.json(
-        { error: "좋아요 처리에 실패했습니다." },
+        { error: getErrorMessage(500, "좋아요 처리에 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -98,10 +99,11 @@ export async function POST(request: NextRequest) {
       data: likeData,
     });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "좋아요 추가 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }
@@ -156,19 +158,20 @@ export async function DELETE(request: NextRequest) {
       .eq("user_id", userData.id);
 
     if (deleteError) {
-      console.error("좋아요 삭제 에러:", deleteError);
+      logError(deleteError, "좋아요 삭제");
       return NextResponse.json(
-        { error: "좋아요 취소에 실패했습니다." },
+        { error: getErrorMessage(500, "좋아요 취소에 실패했습니다.") },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "좋아요 삭제 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }

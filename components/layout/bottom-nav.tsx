@@ -29,7 +29,6 @@ interface BottomNavProps {
 
 export default function BottomNav({ onCreatePost }: BottomNavProps) {
   const pathname = usePathname();
-  const { user } = useUser();
 
   // 네비게이션 메뉴 항목
   const navItems: NavItem[] = [
@@ -74,10 +73,13 @@ export default function BottomNav({ onCreatePost }: BottomNavProps) {
               <li key={item.label}>
                 <button
                   onClick={item.onClick}
-                  className="flex flex-col items-center justify-center p-2"
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2",
+                    "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none"
+                  )}
                   aria-label={item.label}
                 >
-                  <Icon className="w-6 h-6" strokeWidth={1.5} />
+                  <Icon className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
                 </button>
               </li>
             );
@@ -87,15 +89,18 @@ export default function BottomNav({ onCreatePost }: BottomNavProps) {
             <li key={item.href}>
               <Link
                 href={item.href}
+                aria-label={item.label}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center p-2",
-                  "transition-opacity"
+                  "transition-opacity",
+                  "focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none"
                 )}
-                aria-label={item.label}
               >
                 <Icon
                   className={cn("w-6 h-6", isActive && "fill-current")}
                   strokeWidth={isActive ? 2.5 : 1.5}
+                  aria-hidden="true"
                 />
               </Link>
             </li>

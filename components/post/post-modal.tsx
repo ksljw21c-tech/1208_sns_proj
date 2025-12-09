@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, ChevronLeft, ChevronRight, MoreHorizontal, MessageCircle, Send, Bookmark, Heart, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, MessageCircle, Send, Bookmark, Heart } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import {
   Dialog,
@@ -28,7 +28,10 @@ import { Button } from "@/components/ui/button";
 import LikeButton from "./like-button";
 import CommentList from "@/components/comment/comment-list";
 import CommentForm from "@/components/comment/comment-form";
-import { cn, formatRelativeTime, formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
+import { extractErrorInfo } from "@/lib/utils/error-handler";
+import { useToastContext } from "@/components/providers/toast-provider";
+import { apiFetch } from "@/lib/utils/api-client";
 import type { PostWithUser, CommentWithUser } from "@/lib/types";
 
 interface PostModalProps {
@@ -49,6 +52,7 @@ export default function PostModal({
   onDelete,
 }: PostModalProps) {
   const { user } = useUser();
+  const { showError } = useToastContext();
   const [comments, setComments] = useState<CommentWithUser[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
@@ -83,28 +87,26 @@ export default function PostModal({
     const fetchComments = async () => {
       setIsLoadingComments(true);
       try {
-        const response = await fetch(`/api/comments?post_id=${post.id}&limit=100`);
-        if (!response.ok) {
-          throw new Error("댓글을 불러오는데 실패했습니다.");
-        }
-
-        const { data } = await response.json();
-        setComments(data || []);
+        const response = await apiFetch(`/api/comments?post_id=${post.id}&limit=100`);
+        const data = await response.json();
+        setComments(data.data || []);
       } catch (error) {
-        console.error("댓글 로드 에러:", error);
+        const errorInfo = extractErrorInfo(error);
+        console.error("댓글 로드 에러:", errorInfo.message);
+        showError(errorInfo.message);
       } finally {
         setIsLoadingComments(false);
       }
     };
 
     fetchComments();
-  }, [post, open]);
+  }, [post, open, showError]);
 
   // 좋아요 상태 변경 핸들러
   const handleLikeChange = useCallback((liked: boolean, count: number) => {
     setIsLiked(liked);
     setLikeCount(count);
-  }, []);
+  }, []); // showError는 사용하지 않으므로 의존성 배열에 포함하지 않음
 
   // 더블탭 감지 및 좋아요 처리
   const handleImageDoubleTap = useCallback(async () => {
@@ -121,7 +123,7 @@ export default function PostModal({
         setLikeCount((prev) => prev + 1);
 
         try {
-          await fetch("/api/likes", {
+          await apiFetch("/api/likes", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ post_id: post.id }),
@@ -130,7 +132,8 @@ export default function PostModal({
           // 실패 시 롤백
           setIsLiked(false);
           setLikeCount((prev) => prev - 1);
-          console.error("더블탭 좋아요 에러:", error);
+          const errorInfo = extractErrorInfo(error);
+          showError(errorInfo.message);
         }
       }
 
@@ -140,7 +143,7 @@ export default function PostModal({
     }
 
     lastTapRef.current = now;
-  }, [isLiked, post]);
+  }, [isLiked, post, showError]);
 
   // 댓글 작성 핸들러
   const handleCommentSubmit = useCallback(
@@ -150,18 +153,14 @@ export default function PostModal({
       setIsSubmittingComment(true);
 
       try {
-        const response = await fetch("/api/comments", {
+        const response = await apiFetch("/api/comments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ post_id: post.id, content }),
         });
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "댓글 작성에 실패했습니다.");
-        }
-
-        const { data: newComment } = await response.json();
+        const data = await response.json();
+        const newComment = data.data;
 
         // 댓글 목록에 추가
         setComments((prev) => [...prev, newComment]);
@@ -180,7 +179,7 @@ export default function PostModal({
         setIsSubmittingComment(false);
       }
     },
-    [post]
+    [post] // showError는 사용하지 않으므로 의존성 배열에 포함하지 않음
   );
 
   // 댓글 삭제 핸들러
@@ -193,31 +192,24 @@ export default function PostModal({
     setCommentCount((prev) => prev - 1);
 
     try {
-      const response = await fetch("/api/comments", {
+      await apiFetch("/api/comments", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comment_id: commentId }),
       });
-
-      if (!response.ok) {
-        // 실패 시 롤백
-        if (deletedComment) {
-          setComments((prev) => [...prev, deletedComment]);
-          setCommentCount((prev) => prev + 1);
-        }
-        console.error("댓글 삭제 실패");
-      }
     } catch (error) {
       // 에러 시 롤백
       if (deletedComment) {
         setComments((prev) => [...prev, deletedComment]);
         setCommentCount((prev) => prev + 1);
       }
+      const errorInfo = extractErrorInfo(error);
       console.error("댓글 삭제 에러:", error);
+      showError(errorInfo.message);
     } finally {
       setDeletingCommentId(null);
     }
-  }, [comments]);
+  }, [comments, showError]); // showError는 사용하므로 의존성 배열에 포함
 
   // 이전/다음 게시물 찾기
   const currentIndex = post ? posts.findIndex((p) => p.id === post.id) : -1;
@@ -247,14 +239,9 @@ export default function PostModal({
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/posts/${post.id}`, {
+      await apiFetch(`/api/posts/${post.id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "게시물 삭제에 실패했습니다.");
-      }
 
       // 성공 시 다이얼로그 닫기, 모달 닫기 및 부모 컴포넌트에 알림
       setShowDeleteDialog(false);
@@ -263,12 +250,13 @@ export default function PostModal({
         onDelete(post.id);
       }
     } catch (error) {
+      const errorInfo = extractErrorInfo(error);
       console.error("게시물 삭제 에러:", error);
-      alert(error instanceof Error ? error.message : "게시물 삭제에 실패했습니다.");
+      showError(errorInfo.message);
     } finally {
       setIsDeleting(false);
     }
-  }, [post, onClose, onDelete]);
+  }, [post, onClose, onDelete, showError]);
 
   if (!post) return null;
 
@@ -300,7 +288,7 @@ export default function PostModal({
               fill
               className="object-contain"
               sizes="(max-width: 1024px) 100vw, 450px"
-              priority
+              priority={open}
             />
 
             {/* 더블탭 하트 애니메이션 */}
@@ -318,19 +306,19 @@ export default function PostModal({
           {hasPrevious && (
             <button
               onClick={handlePrevious}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors lg:block hidden"
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors lg:block hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:outline-none"
               aria-label="이전 게시물"
             >
-              <ChevronLeft className="w-6 h-6 text-white" />
+              <ChevronLeft className="w-6 h-6 text-white" aria-hidden="true" />
             </button>
           )}
           {hasNext && (
             <button
               onClick={handleNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors lg:block hidden"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors lg:block hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:outline-none"
               aria-label="다음 게시물"
             >
-              <ChevronRight className="w-6 h-6 text-white" />
+              <ChevronRight className="w-6 h-6 text-white" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -370,10 +358,10 @@ export default function PostModal({
             {isOwner && (
               <button
                 onClick={() => setShowDeleteDialog(true)}
-                className="p-1 hover:opacity-70 transition-opacity"
+                className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
                 aria-label="더보기"
               >
-                <MoreHorizontal className="w-5 h-5" />
+                <MoreHorizontal className="w-5 h-5" aria-hidden="true" />
               </button>
             )}
           </header>
@@ -399,25 +387,30 @@ export default function PostModal({
                   className="p-1 opacity-50 cursor-default"
                   aria-label="댓글"
                   disabled
+                  aria-disabled="true"
                 >
-                  <MessageCircle className="w-6 h-6" strokeWidth={1.5} />
+                  <MessageCircle className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
                 </button>
 
                 {/* 공유 버튼 (UI만) */}
                 <button
-                  className="p-1 hover:opacity-70 transition-opacity"
+                  className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
                   aria-label="공유"
+                  disabled
+                  aria-disabled="true"
                 >
-                  <Send className="w-6 h-6" strokeWidth={1.5} />
+                  <Send className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
                 </button>
               </div>
 
               {/* 북마크 버튼 (UI만) */}
               <button
-                className="p-1 hover:opacity-70 transition-opacity"
+                className="p-1 hover:opacity-70 transition-opacity focus-visible:ring-2 focus-visible:ring-instagram-blue focus-visible:ring-offset-2 focus-visible:outline-none rounded"
                 aria-label="저장"
+                disabled
+                aria-disabled="true"
               >
-                <Bookmark className="w-6 h-6" strokeWidth={1.5} />
+                <Bookmark className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
 

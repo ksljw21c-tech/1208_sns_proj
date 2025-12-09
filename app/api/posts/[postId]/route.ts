@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { getErrorMessage, logError, extractErrorInfo } from "@/lib/utils/error-handler";
 
 /**
  * DELETE /api/posts/[postId] - 게시물 삭제
@@ -49,9 +50,9 @@ export async function DELETE(
       .single();
 
     if (userError || !userData) {
-      console.error("사용자 조회 에러:", userError);
+      logError(userError, "사용자 조회");
       return NextResponse.json(
-        { error: "사용자를 찾을 수 없습니다." },
+        { error: getErrorMessage(404, "사용자를 찾을 수 없습니다.") },
         { status: 404 }
       );
     }
@@ -92,12 +93,12 @@ export async function DELETE(
             .remove([storagePath]);
 
           if (storageError) {
-            console.error("Storage 이미지 삭제 에러:", storageError);
+            logError(storageError, "Storage 이미지 삭제");
             // Storage 삭제 실패해도 DB 삭제는 진행 (이미지만 남을 수 있음)
           }
         }
       } catch (storageErr) {
-        console.error("Storage 경로 추출/삭제 에러:", storageErr);
+        logError(storageErr, "Storage 경로 추출/삭제");
         // Storage 삭제 실패해도 DB 삭제는 진행
       }
     }
@@ -109,19 +110,20 @@ export async function DELETE(
       .eq("id", postId);
 
     if (deleteError) {
-      console.error("게시물 삭제 에러:", deleteError);
+      logError(deleteError, "게시물 삭제");
       return NextResponse.json(
-        { error: "게시물 삭제에 실패했습니다." },
+        { error: getErrorMessage(500, "게시물 삭제에 실패했습니다.") },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "게시물 삭제 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }

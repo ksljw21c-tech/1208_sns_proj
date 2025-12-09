@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { getErrorMessage, logError, extractErrorInfo } from "@/lib/utils/error-handler";
 
 /**
  * GET /api/comments - 댓글 목록 조회
@@ -45,9 +46,9 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (commentsError) {
-      console.error("댓글 조회 에러:", commentsError);
+      logError(commentsError, "댓글 조회");
       return NextResponse.json(
-        { error: "댓글을 불러오는데 실패했습니다." },
+        { error: getErrorMessage(500, "댓글을 불러오는데 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -64,7 +65,8 @@ export async function GET(request: NextRequest) {
       .in("id", userIds);
 
     if (usersError) {
-      console.error("사용자 조회 에러:", usersError);
+      logError(usersError, "댓글 작성자 조회");
+      // 사용자 조회 실패는 치명적이지 않으므로 계속 진행
     }
 
     // 사용자 맵 생성
@@ -82,10 +84,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: commentsWithUser });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "댓글 목록 조회 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }
@@ -172,9 +175,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (commentError) {
-      console.error("댓글 작성 에러:", commentError);
+      logError(commentError, "댓글 작성");
       return NextResponse.json(
-        { error: "댓글 작성에 실패했습니다." },
+        { error: getErrorMessage(500, "댓글 작성에 실패했습니다.") },
         { status: 500 }
       );
     }
@@ -188,10 +191,11 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "댓글 작성 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }
@@ -267,19 +271,20 @@ export async function DELETE(request: NextRequest) {
       .eq("id", comment_id);
 
     if (deleteError) {
-      console.error("댓글 삭제 에러:", deleteError);
+      logError(deleteError, "댓글 삭제");
       return NextResponse.json(
-        { error: "댓글 삭제에 실패했습니다." },
+        { error: getErrorMessage(500, "댓글 삭제에 실패했습니다.") },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API 에러:", error);
+    const errorInfo = extractErrorInfo(error);
+    logError(error, "댓글 삭제 API");
     return NextResponse.json(
-      { error: "서버 오류가 발생했습니다." },
-      { status: 500 }
+      { error: errorInfo.message },
+      { status: errorInfo.statusCode || 500 }
     );
   }
 }

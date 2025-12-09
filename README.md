@@ -401,6 +401,58 @@ saas-template/
 - **`components/providers/sync-user-provider.tsx`**: 앱 전역에서 사용자 동기화 실행
 - **`CLAUDE.md`**: Claude Code를 위한 프로젝트 가이드
 
+## 배포
+
+### Vercel 배포
+
+1. **Vercel 프로젝트 생성**
+   - [Vercel Dashboard](https://vercel.com/dashboard)에 접속
+   - **"Add New Project"** 클릭
+   - GitHub 저장소 연결 또는 직접 배포
+
+2. **환경 변수 설정**
+   - Vercel 프로젝트 설정 → **Environment Variables**
+   - `.env.example`에 있는 모든 변수를 추가:
+     - Clerk 관련 변수
+     - Supabase 관련 변수
+     - 기타 필요한 변수
+
+3. **배포 설정 확인**
+   - `vercel.json` 파일이 프로젝트 루트에 있는지 확인
+   - Build Command: `pnpm build`
+   - Output Directory: `.next`
+   - Install Command: `pnpm install`
+
+4. **배포 실행**
+   - Vercel이 자동으로 배포를 시작합니다
+   - 배포 완료 후 제공되는 URL로 접속하여 테스트
+
+### 프로덕션 빌드 테스트
+
+로컬에서 프로덕션 빌드를 테스트하려면:
+
+```bash
+# 프로덕션 빌드
+pnpm build
+
+# 프로덕션 서버 실행
+pnpm start
+```
+
+### SEO 설정
+
+프로젝트에는 다음 SEO 파일들이 포함되어 있습니다:
+
+- `app/robots.ts`: 검색 엔진 크롤러 설정
+- `app/sitemap.ts`: 사이트맵 생성
+- `app/manifest.ts`: PWA 매니페스트
+- `app/layout.tsx`: Open Graph 및 Twitter 카드 메타데이터
+
+배포 후 다음 URL에서 확인할 수 있습니다:
+- `https://your-domain.com/robots.txt`
+- `https://your-domain.com/sitemap.xml`
+- `https://your-domain.com/manifest.json`
+
 ## 추가 리소스
 
 - [Next.js 15 문서](https://nextjs.org/docs)
@@ -408,3 +460,4 @@ saas-template/
 - [Supabase 문서](https://supabase.com/docs)
 - [shadcn/ui 문서](https://ui.shadcn.com/)
 - [Tailwind CSS v4 문서](https://tailwindcss.com/docs)
+- [Vercel 배포 가이드](https://vercel.com/docs)
