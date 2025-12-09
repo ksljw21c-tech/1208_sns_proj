@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MoreHorizontal, MessageCircle, Send, Bookmark, Heart } from "lucide-react";
@@ -40,14 +40,21 @@ export default function PostCard({ post, comments: initialComments = [], onComme
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const lastTapRef = useRef<number>(0);
+  const singleClickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 더블탭 감지 및 좋아요 처리
-  const handleImageDoubleTap = useCallback(async () => {
+  const handleImageClick = useCallback(async () => {
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // 더블탭 감지
+      // 더블탭 감지 - 단일 클릭 타이머 취소
+      if (singleClickTimerRef.current) {
+        clearTimeout(singleClickTimerRef.current);
+        singleClickTimerRef.current = null;
+      }
+
+      // 더블탭 좋아요 처리
       if (!isLiked) {
         // 좋아요 추가
         setIsLiked(true);
@@ -70,10 +77,22 @@ export default function PostCard({ post, comments: initialComments = [], onComme
       // 큰 하트 애니메이션 표시
       setShowDoubleTapHeart(true);
       setTimeout(() => setShowDoubleTapHeart(false), 1000);
+    } else {
+      // 단일 클릭 - 더블탭인지 확인하기 위해 잠시 대기
+      if (singleClickTimerRef.current) {
+        clearTimeout(singleClickTimerRef.current);
+      }
+      singleClickTimerRef.current = setTimeout(() => {
+        // 더블탭이 아니면 모달 열기
+        if (onCommentClick) {
+          onCommentClick();
+        }
+        singleClickTimerRef.current = null;
+      }, DOUBLE_TAP_DELAY);
     }
 
     lastTapRef.current = now;
-  }, [isLiked, post.id]);
+  }, [isLiked, post.id, onCommentClick]);
 
   // 좋아요 상태 변경 핸들러
   const handleLikeChange = useCallback((liked: boolean, count: number) => {
@@ -196,7 +215,7 @@ export default function PostCard({ post, comments: initialComments = [], onComme
       {/* 이미지 영역 */}
       <div
         className="relative aspect-square bg-gray-100 cursor-pointer"
-        onClick={handleImageDoubleTap}
+        onClick={handleImageClick}
       >
         <Image
           src={post.image_url}

@@ -12,6 +12,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import PostCard from "./post-card";
 import PostCardSkeleton from "./post-card-skeleton";
+import PostModal from "./post-modal";
 import type { PostWithUser } from "@/lib/types";
 
 interface PostFeedProps {
@@ -26,6 +27,7 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef(initialPosts.length);
 
@@ -126,40 +128,68 @@ export default function PostFeed({ userId, initialPosts = [] }: PostFeedProps) {
     );
   }
 
+  // 선택된 게시물 찾기
+  const selectedPost = selectedPostId
+    ? posts.find((p) => p.id === selectedPostId) || null
+    : null;
+
+  // 모달 열기 핸들러
+  const handleOpenModal = useCallback((postId: string) => {
+    setSelectedPostId(postId);
+  }, []);
+
+  // 모달 닫기 핸들러
+  const handleCloseModal = useCallback(() => {
+    setSelectedPostId(null);
+  }, []);
+
+  // 이전/다음 게시물로 이동
+  const handleNavigate = useCallback((postId: string) => {
+    setSelectedPostId(postId);
+  }, []);
+
   return (
-    <div className="space-y-4">
-      {/* 게시물 목록 */}
-      {posts.map((post) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          onCommentClick={() => {
-            // TODO: 댓글 모달 열기
-            console.log("댓글 클릭:", post.id);
-          }}
-        />
-      ))}
+    <>
+      <div className="space-y-4">
+        {/* 게시물 목록 */}
+        {posts.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
+            onCommentClick={() => handleOpenModal(post.id)}
+          />
+        ))}
 
-      {/* 로딩 스켈레톤 */}
-      {isLoading && (
-        <>
-          <PostCardSkeleton />
-          <PostCardSkeleton />
-        </>
-      )}
+        {/* 로딩 스켈레톤 */}
+        {isLoading && (
+          <>
+            <PostCardSkeleton />
+            <PostCardSkeleton />
+          </>
+        )}
 
-      {/* 무한 스크롤 트리거 */}
-      {hasMore && <div ref={observerRef} className="h-4" />}
+        {/* 무한 스크롤 트리거 */}
+        {hasMore && <div ref={observerRef} className="h-4" />}
 
-      {/* 더 이상 게시물 없음 */}
-      {!hasMore && posts.length > 0 && (
-        <div className="text-center py-8">
-          <p className="text-instagram-secondary text-sm">
-            모든 게시물을 확인했습니다.
-          </p>
-        </div>
-      )}
-    </div>
+        {/* 더 이상 게시물 없음 */}
+        {!hasMore && posts.length > 0 && (
+          <div className="text-center py-8">
+            <p className="text-instagram-secondary text-sm">
+              모든 게시물을 확인했습니다.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 게시물 상세 모달 */}
+      <PostModal
+        open={selectedPostId !== null}
+        onClose={handleCloseModal}
+        post={selectedPost}
+        posts={posts}
+        onNavigate={handleNavigate}
+      />
+    </>
   );
 }
 
